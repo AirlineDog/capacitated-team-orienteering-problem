@@ -1,4 +1,5 @@
 import math
+import sys
 
 
 class Model:
@@ -33,15 +34,23 @@ class Model:
                 a = self.allNodes[i]
                 b = self.allNodes[j]
                 dist = math.sqrt(math.pow(a.x - b.x, 2) + math.pow(a.y - b.y, 2))
-                self.matrix[i][j] = dist
+                if dist > 0:
+                    self.matrix[i][j] = dist
+                else:
+                    self.matrix[i][j] = sys.maxsize
 
 
 class Node:
     def __init__(self, idd, xx, yy, dem, st, prf):
         self.x = xx
         self.y = yy
-        self.ID = idd
+        self.id = idd
         self.demand = dem
         self.service_time = st
         self.profit = prf
         self.isRouted = False
+
+
+class Routes:
+    def __init__(self):
+        self.nodes = []
