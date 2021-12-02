@@ -9,8 +9,9 @@ ys = [y.y for y in m.allNodes]
 ids = [x.id for x in m.allNodes]
 plt.scatter(xs, ys, c="blue", marker=".")
 plt.scatter(23.142, 11.736, c="black")
+plt.plot(xs, ys, c="black")
 for x, y, id in zip(xs, ys, ids):
     plt.annotate(str(id), xy=(x,y))
 plt.gcf().set_size_inches((20, 20))
-plt.savefig("mygraph.png")
+plt.savefig("mygraphlined.png")
 print()
