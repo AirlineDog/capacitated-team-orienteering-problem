@@ -6,14 +6,12 @@ class Model:
     def __init__(self):
         self.allNodes = []
         self.matrix = []
-        self.max_capacity = 150
-        self.vehicles = 6
-        self.max_duration = 200
 
     def build_model(self):
         with open("Instance.csv") as file:
             lines = file.readlines()
         depot = Node(0, 23.142, 11.736, 0, 0, 0)
+        depot.is_routed = True
         self.allNodes.append(depot)
         total_customers = 336
         for i in range(0, total_customers):
@@ -34,10 +32,7 @@ class Model:
                 a = self.allNodes[i]
                 b = self.allNodes[j]
                 dist = math.sqrt(math.pow(a.x - b.x, 2) + math.pow(a.y - b.y, 2))
-                if dist > 0:
-                    self.matrix[i][j] = dist
-                else:
-                    self.matrix[i][j] = sys.maxsize
+                self.matrix[i][j] = dist
 
 
 class Node:
@@ -48,9 +43,16 @@ class Node:
         self.demand = dem
         self.service_time = st
         self.profit = prf
-        self.isRouted = False
+        self.is_routed = False
 
 
-class Routes:
+class Route:
     def __init__(self):
-        self.nodes = []
+        self.truck = Truck()
+        self.nodes = [0]
+
+
+class Truck:
+    def __init__(self):
+        self.max_capacity = 150
+        self.max_duration = 200
