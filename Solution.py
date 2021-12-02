@@ -34,8 +34,8 @@ class Solution:
         #         route.nodes.append(id)
         #         break
         # self.update_dependent(node)
-        routes = [[0], [0]]
-        while len(routes[0]) + len(routes[1]) < 337:
+        routes = [[0] for x in range(6)]
+        while sum([len(route) for route in routes]) < 337:
             for route in routes:
                 min_value = sys.maxsize
                 for i in range(len(self.all_nodes)):
@@ -45,8 +45,8 @@ class Solution:
                 node = self.all_nodes[id]
                 node.is_routed = True
                 route.append(id)
-        routes[0].append(0)
-        routes[1].append(0)
+        for route in routes:
+            route.append(0)
         graph(self, routes)
         print()
 
