@@ -1,5 +1,5 @@
 from Model import *
-
+from Graph import *
 
 class Solution:
 
@@ -34,18 +34,22 @@ class Solution:
         #         route.nodes.append(id)
         #         break
         # self.update_dependent(node)
-        id = 0
-        temp = []
-        for x in range(len(self.all_nodes)-1):
-            min_value = sys.maxsize
-            for i in range(len(self.all_nodes)):
-                if self.matrix[id][i] < min_value and not self.all_nodes[i].is_routed:
-                    min_value = self.matrix[id][i]
-            id = self.matrix[id].index(min_value)
-            node = self.all_nodes[id]
-            node.is_routed = True
-            temp.append(id)
+        routes = [[0], [0]]
+        while len(routes[0]) + len(routes[1]) < 337:
+            for route in routes:
+                min_value = sys.maxsize
+                for i in range(len(self.all_nodes)):
+                    if self.matrix[route[-1]][i] < min_value and not self.all_nodes[i].is_routed:
+                        min_value = self.matrix[route[-1]][i]
+                id = self.matrix[route[-1]].index(min_value)
+                node = self.all_nodes[id]
+                node.is_routed = True
+                route.append(id)
+        routes[0].append(0)
+        routes[1].append(0)
+        graph(self, routes)
         print()
+
         # next_point = min(self.matrix[0])
         # id = self.matrix[0].index(next_point)
         # node = self.all_nodes[id]
