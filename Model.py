@@ -16,13 +16,13 @@ class Model:
         total_customers = 336
         for i in range(0, total_customers):
             data = lines[11 + i].strip().split(",")
-            id = int(data[0])
+            point_id = int(data[0])
             x = float(data[1])
             y = float(data[2])
             dem = int(data[3])
             st = int(data[4])
             prf = int(data[5])
-            self.allNodes.append(Node(id, x, y, dem, st, prf))
+            self.allNodes.append(Node(point_id, x, y, dem, st, prf))
 
         rows = len(self.allNodes)
         self.matrix = [[0.0 for x in range(rows)] for y in range(rows)]
@@ -39,7 +39,7 @@ class Node:
     def __init__(self, idd, xx, yy, dem, st, prf):
         self.x = xx
         self.y = yy
-        self.id = idd
+        self.ID = idd
         self.demand = dem
         self.service_time = st
         self.profit = prf
@@ -50,6 +50,7 @@ class Route:
     def __init__(self):
         self.truck = Truck()
         self.nodes = [0]
+        self.returned = False
 
 
 class Truck:
