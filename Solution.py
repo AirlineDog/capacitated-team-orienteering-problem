@@ -32,6 +32,8 @@ class Solution:
     def solve(self):
         """VRP Solver"""
         # at least one route on the road
+        print(self.matrix[269][0])
+        print(self.matrix[7][320] + self.matrix[320][0])
         while not all(route.returned for route in self.routes):
             for route in self.routes:
                 # route on the road
@@ -51,8 +53,8 @@ class Solution:
                         node_id = self.matrix[route.nodes[-1]].index(min_value)
                         node = self.all_nodes[node_id]
                         node.is_routed = True
-                        route.nodes.append(node_id)
                         self.update_dependent(route, node)
+                        route.nodes.append(node_id)
                     except ValueError:
                         route.nodes.append(0)
                         route.truck.max_duration -= self.matrix[route.nodes[-1]][0]
