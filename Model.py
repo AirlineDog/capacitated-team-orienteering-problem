@@ -1,5 +1,4 @@
 import math
-import sys
 
 
 class Model:
@@ -10,9 +9,11 @@ class Model:
     def build_model(self):
         with open("Instance.csv") as file:
             lines = file.readlines()
+        # initialise depot
         depot = Node(0, 23.142, 11.736, 0, 0, 0)
         depot.is_routed = True
         self.allNodes.append(depot)
+        # read data form csv
         total_customers = 336
         for i in range(0, total_customers):
             data = lines[11 + i].strip().split(",")
@@ -24,6 +25,7 @@ class Model:
             prf = int(data[5])
             self.allNodes.append(Node(point_id, x, y, dem, st, prf))
 
+        # built cost matrix
         rows = len(self.allNodes)
         self.matrix = [[0.0 for x in range(rows)] for y in range(rows)]
 
