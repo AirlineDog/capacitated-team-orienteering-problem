@@ -17,5 +17,8 @@ def graph(solution, routes):
     for x, y, ID in zip(xs, ys, ids):
         plt.annotate(str(ID), xy=(x, y))
     plt.gcf().set_size_inches((30, 30))
-    plt.legend(["Route " + str(i) for i in range(len(solution.routes))], loc='lower right')
-    plt.savefig("new.png")
+    leg = ["Route " + str(i) + "d:" + str(solution.routes[i].truck.max_duration)
+           + "c:" + str(solution.routes[i].truck.max_capacity)
+           for i in range(len(solution.routes))] + [solution.total_profit]
+    plt.legend(leg, loc='lower right')
+    plt.savefig("test.png")
