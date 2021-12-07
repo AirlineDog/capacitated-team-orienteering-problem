@@ -24,14 +24,20 @@ class Solution:
 
     def print_solution(self):
         """Prints final solution"""
-        print("Total Profit")
-        print(self.total_profit)
-        for i in range(len(self.routes)):
-            print("Route " + str(i + 1))
-            print(*self.routes[i].nodes)
-            # debug purposes
-            print("Duration left :" + str(self.routes[i].truck.max_duration))
-            print("Capacity left :" + str(self.routes[i].truck.max_capacity))
+        with open("sol.txt", "w") as f:
+            f.write("Total Profit\n")
+            f.write(str(self.total_profit) + "\n")
+            for i in range(len(self.routes)):
+                f.write("Route " + str(i + 1) + "\n")
+                nodes = ""
+                for x in range(len(self.routes[i].nodes)):
+                    nodes += str(self.routes[i].nodes[x]) + " "
+                nodes = nodes.strip()
+                f.write(nodes)
+                f.write("\n")
+                # debug purposes
+                # print("Duration left :" + str(self.routes[i].truck.max_duration))
+                # print("Capacity left :" + str(self.routes[i].truck.max_capacity))
 
     def find_next(self, route):
         min_value = sys.maxsize  # min to infinity
