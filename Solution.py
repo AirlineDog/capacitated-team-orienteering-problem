@@ -9,7 +9,7 @@ class Solution:
         self.total_profit = 0
         self.routes = [Route() for x in range(6)]
         self.matrix = model.matrix
-        self.all_nodes = model.allNodes
+        self.all_nodes = model.all_nodes
 
     def update_dependent(self, min_value, route):
         """Updates route dependent values, total profit and node is_routed flag"""

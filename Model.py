@@ -3,42 +3,75 @@ import math
 
 class Model:
     def __init__(self):
-        self.allNodes = []
+        self.all_nodes = []
         self.matrix = []
+        self.vehicles = 0
+        self.capacity = 0
+        self.time_limit = 0
 
-    def build_model(self):
-        with open("Instance.csv") as file:
-            lines = file.readlines()
-        # initialise depot
-        depot = Node(0, 23.142, 11.736, 0, 0, 0)
-        depot.is_routed = True
-        self.allNodes.append(depot)
-        # read data form csv
-        total_customers = 336
-        for i in range(0, total_customers):
-            data = lines[11 + i].strip().split(",")
-            point_id = int(data[0])
-            x = float(data[1])
-            y = float(data[2])
-            dem = int(data[3])
-            st = int(data[4])
-            prf = int(data[5])
-            self.allNodes.append(Node(point_id, x, y, dem, st, prf))
-
-        # built cost matrix
-        rows = len(self.allNodes)
+    def build_cost_matrix(self):
+        """builds cost matrix"""
+        rows = len(self.all_nodes)
         self.matrix = [[0.0 for x in range(rows)] for y in range(rows)]
 
         for i in range(0, rows):
-            for j in range(0, len(self.allNodes)):
-                a = self.allNodes[i]
-                b = self.allNodes[j]
+            for j in range(0, len(self.all_nodes)):
+                a = self.all_nodes[i]
+                b = self.all_nodes[j]
                 dist = math.sqrt(math.pow(a.x - b.x, 2) + math.pow(a.y - b.y, 2))
                 self.matrix[i][j] = dist
 
+    def load_model(self, file_name):
+        all_lines = list(open(file_name, "r"))
+
+        line_counter = 0
+        ln = all_lines[line_counter]
+        no_spaces = ln.split(sep='\t')
+        self.vehicles = int(no_spaces[1])
+
+        line_counter += 1
+        ln = all_lines[line_counter]
+        no_spaces = ln.split(sep='\t')
+        self.capacity = int(no_spaces[1])
+
+        line_counter += 1
+        ln = all_lines[line_counter]
+        no_spaces = ln.split(sep='\t')
+        self.time_limit = int(no_spaces[1])
+
+        line_counter += 3
+        ln = all_lines[line_counter]
+
+        no_spaces = ln.split(sep='\t')
+        x = float(no_spaces[1])
+        y = float(no_spaces[2])
+        depot = Node(0, x, y)
+        depot.is_routed = True
+        self.all_nodes.append(depot)
+
+        line_counter += 2
+        ln = all_lines[line_counter]
+        no_spaces = ln.split(sep='\t')
+        tot_customers = int(no_spaces[1])
+
+        line_counter += 4
+
+        for i in range(tot_customers):
+            ln = all_lines[line_counter]
+            no_spaces = ln.split(sep='\t')
+            idd = int(no_spaces[0])
+            x = float(no_spaces[1])
+            y = float(no_spaces[2])
+            demand = int(no_spaces[3])
+            st = int(no_spaces[4])
+            profit = int(no_spaces[5])
+            customer = Node(idd, x, y, demand, st, profit)
+            self.all_nodes.append(customer)
+            line_counter += 1
+
 
 class Node:
-    def __init__(self, idd, xx, yy, dem, st, prf):
+    def __init__(self, idd, xx, yy, dem=0, st=0, prf=0):
         self.x = xx
         self.y = yy
         self.ID = idd
