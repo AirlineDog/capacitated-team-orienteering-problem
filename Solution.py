@@ -39,7 +39,7 @@ class Solution:
                 # print("Duration left :" + str(self.routes[i].truck.max_duration))
                 # print("Capacity left :" + str(self.routes[i].truck.max_capacity))
 
-    def find_next(self, route):
+    def find_next_node(self, route):
         min_value = sys.maxsize  # min to infinity
         # Searching all nodes
         for i in range(len(self.all_nodes)):
@@ -52,14 +52,13 @@ class Solution:
                     min_value = self.matrix[route.nodes[-1]][i]
         return min_value
 
-    def solve(self):
-        """VRP Solver"""
-
+    def initial_solution(self):
+        """VRP Nearest neighbor Solver"""
         for route in self.routes:
             # route on the road
-            for times in range(2):
+            for times in range(1):
                 if not route.returned:
-                    min_value = self.find_next(route)
+                    min_value = self.find_next_node(route)
                     # ValueError on .index() if route has to return to depot
                     try:
                         self.update_dependent(min_value, route)
@@ -71,7 +70,7 @@ class Solution:
         for route in self.routes:
             # route on the road
             while not route.returned:  # next route waits for the previous to return
-                min_value = self.find_next(route)
+                min_value = self.find_next_node(route)
                 # ValueError on .index() if route has to return to depot
                 try:
                     self.update_dependent(min_value, route)
@@ -79,6 +78,10 @@ class Solution:
                     route.truck.max_duration -= self.matrix[route.nodes[-1]][0]
                     route.nodes.append(0)
                     route.returned = True
+
+    def solve(self):
+        """VRP Complete Solver"""
+        self.initial_solution()
 
         self.print_solution()
         graph(self, self.routes)
