@@ -21,4 +21,4 @@ def graph(solution, routes):
            + "c:" + str(solution.routes[i].truck.max_capacity)
            for i in range(len(solution.routes))] + [solution.total_profit]
     plt.legend(leg, loc='lower right')
-    plt.savefig("test.png")
+    plt.savefig("testLocal.png")

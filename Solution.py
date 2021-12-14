@@ -3,6 +3,18 @@ from Graph import graph
 from Model import Route
 
 
+class RelocationMove(object):
+    def __init__(self):
+        self.positionOfRelocated = None
+        self.positionToBeInserted = None
+        self.moveCost = None
+
+    def initialize(self):
+        self.moveCost = 10 ** 9
+        self.positionOfRelocated = None
+        self.positionToBeInserted = None
+
+
 class Solution:
 
     def __init__(self, model):
@@ -55,17 +67,15 @@ class Solution:
     def initial_solution(self):
         """VRP Nearest neighbor Solver"""
         for route in self.routes:
-            # route on the road
-            for times in range(1):
-                if not route.returned:
-                    min_value = self.find_next_node(route)
-                    # ValueError on .index() if route has to return to depot
-                    try:
-                        self.update_dependent(min_value, route)
-                    except ValueError:
-                        route.truck.max_duration -= self.matrix[route.nodes[-1]][0]
-                        route.nodes.append(0)
-                        route.returned = True
+            if not route.returned:
+                min_value = self.find_next_node(route)
+                # ValueError on .index() if route has to return to depot
+                try:
+                    self.update_dependent(min_value, route)
+                except ValueError:
+                    route.truck.max_duration -= self.matrix[route.nodes[-1]][0]
+                    route.nodes.append(0)
+                    route.returned = True
 
         for route in self.routes:
             # route on the road
@@ -79,9 +89,59 @@ class Solution:
                     route.nodes.append(0)
                     route.returned = True
 
+    def change_order(self):
+        for route in self.routes:
+            rm = RelocationMove()
+            termination = False
+            while termination is False:
+                rm.initialize()
+                self.find_best_relocation_move(rm, route)
+                if rm.positionOfRelocated is not None:
+                    if rm.moveCost < -0.00001:
+                        self.apply_relocation_move(rm, route)
+                    else:
+                        termination = True
+
+    def find_best_relocation_move(self, rm, route):
+        for relocation_index in range(1, len(route.nodes) - 1):
+            a = self.all_nodes[route.nodes[relocation_index - 1]]
+            b = self.all_nodes[route.nodes[relocation_index]]
+            c = self.all_nodes[route.nodes[relocation_index + 1]]
+
+            for after_index in range(0, len(route.nodes) - 1):
+
+                if after_index != relocation_index and after_index != relocation_index - 1:
+
+                    f = self.all_nodes[route.nodes[after_index]]
+                    g = self.all_nodes[route.nodes[after_index + 1]]
+
+                    cost_removed1 = self.matrix[a.ID][b.ID] + self.matrix[b.ID][c.ID]
+                    cost_removed2 = self.matrix[f.ID][g.ID]
+
+                    cost_added1 = self.matrix[a.ID][c.ID]
+                    cost_added2 = self.matrix[f.ID][b.ID] + self.matrix[b.ID][g.ID]
+
+                    move_cost = cost_added1 + cost_added2 - cost_removed1 - cost_removed2
+
+                    if move_cost < rm.moveCost:
+                        rm.moveCost = move_cost
+                        rm.positionOfRelocated = relocation_index
+                        rm.positionToBeInserted = after_index
+
+    def apply_relocation_move(self, rm, route):
+        relocated_node = self.all_nodes[route.nodes[rm.positionOfRelocated]]
+        del route.nodes[rm.positionOfRelocated]
+
+        if rm.positionToBeInserted < rm.positionOfRelocated:
+            route.nodes.insert(rm.positionToBeInserted + 1, relocated_node.ID)
+        else:
+            route.nodes.insert(rm.positionToBeInserted, relocated_node.ID)
+
+        route.truck.max_duration -= rm.moveCost
+
     def solve(self):
         """VRP Complete Solver"""
         self.initial_solution()
-
+        self.change_order()
         self.print_solution()
         graph(self, self.routes)
