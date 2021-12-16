@@ -205,31 +205,35 @@ class Solution:
     def add_nodes(self):
         am = AdditionMove()
         for route in self.routes:
-            am.initialize()
-            min_overall = sys.maxsize
-            for node in self.all_nodes:
-                if not node.is_routed:
-                    min_cost = sys.maxsize
-                    position = 0
-                    move_cost = 0
-                    for place in range(len(route.nodes) - 1):
-                        costRemoved = self.matrix[route.nodes[place]][route.nodes[place + 1]]
-                        costAdded = self.matrix[route.nodes[place]][node.ID] + self.matrix[node.ID][
-                            route.nodes[place + 1]]
-                        cost = costAdded - costRemoved + node.service_time
-                        # enough duration and capacity
-                        if cost < route.truck.max_duration \
-                                and node.demand < route.truck.max_capacity:
-                            # selection condition
-                            if cost / node.profit < min_cost:
-                                min_cost = cost / node.profit
-                                position = place
-                                move_cost = cost
-                    if min_cost < min_overall:
-                        min_overall = min_cost
-                        am.store_best_addition_move(route, node, position, move_cost)
-            if min_overall != sys.maxsize:
-                self.apply_add_node(am)
+            flag = False
+            while not flag:
+                am.initialize()
+                min_overall = sys.maxsize
+                for node in self.all_nodes:
+                    if not node.is_routed:
+                        min_cost = sys.maxsize
+                        position = 0
+                        move_cost = 0
+                        for place in range(len(route.nodes) - 1):
+                            costRemoved = self.matrix[route.nodes[place]][route.nodes[place + 1]]
+                            costAdded = self.matrix[route.nodes[place]][node.ID] + self.matrix[node.ID][
+                                route.nodes[place + 1]]
+                            cost = costAdded - costRemoved + node.service_time
+                            # enough duration and capacity
+                            if cost < route.truck.max_duration \
+                                    and node.demand < route.truck.max_capacity:
+                                # selection condition
+                                if cost / node.profit < min_cost:
+                                    min_cost = cost / node.profit
+                                    position = place
+                                    move_cost = cost
+                        if min_cost < min_overall:
+                            min_overall = min_cost
+                            am.store_best_addition_move(route, node, position, move_cost)
+                if min_overall != sys.maxsize:
+                    self.apply_add_node(am)
+                else:
+                    flag = True
 
     def apply_add_node(self, am: AdditionMove):
         am.additionRoute.nodes.insert(am.additionPosition + 1, am.addingNode.ID)
@@ -242,5 +246,6 @@ class Solution:
         self.initial_solution()
         self.relocation_LS()
         self.add_nodes()
+        self.relocation_LS()
         self.print_solution()
         graph(self, self.routes)
