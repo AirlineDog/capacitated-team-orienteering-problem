@@ -33,6 +33,30 @@ class RelocationMove:
         self.moveCost = moveCost
 
 
+class AdditionMove:
+    def __init__(self):
+        self.additionRoute = None
+        self.addingNode = None
+        self.additionPosition = None
+        self.moveCost = None
+        self.profitGain = None
+
+    def initialize(self):
+        self.additionRoute = None
+        self.addingNode = None
+        self.additionPosition = None
+        self.profitGain = None
+        self.moveCost = None
+
+    def store_best_addition_move(self, additionRoute, addingNode,
+                                 additionPosition, moveCost):
+        self.additionRoute = additionRoute
+        self.addingNode = addingNode
+        self.additionPosition = additionPosition
+        self.profitGain = addingNode.profit
+        self.moveCost = moveCost
+
+
 class Solution:
 
     def __init__(self, model):
@@ -178,9 +202,45 @@ class Solution:
             originRt.truck.max_capacity += self.all_nodes[B].demand
             targetRt.truck.max_capacity -= self.all_nodes[B].demand
 
+    def add_nodes(self):
+        am = AdditionMove()
+        for route in self.routes:
+            am.initialize()
+            min_overall = sys.maxsize
+            for node in self.all_nodes:
+                if not node.is_routed:
+                    min_cost = sys.maxsize
+                    position = 0
+                    move_cost = 0
+                    for place in range(len(route.nodes) - 1):
+                        costRemoved = self.matrix[route.nodes[place]][route.nodes[place + 1]]
+                        costAdded = self.matrix[route.nodes[place]][node.ID] + self.matrix[node.ID][
+                            route.nodes[place + 1]]
+                        cost = costAdded - costRemoved + node.service_time
+                        # enough duration and capacity
+                        if cost < route.truck.max_duration \
+                                and node.demand < route.truck.max_capacity:
+                            # selection condition
+                            if cost / node.profit < min_cost:
+                                min_cost = cost / node.profit
+                                position = place
+                                move_cost = cost
+                    if min_cost < min_overall:
+                        min_overall = min_cost
+                        am.store_best_addition_move(route, node, position, move_cost)
+            if min_overall != sys.maxsize:
+                self.apply_add_node(am)
+
+    def apply_add_node(self, am: AdditionMove):
+        am.additionRoute.nodes.insert(am.additionPosition + 1, am.addingNode.ID)
+        am.additionRoute.truck.max_duration -= am.moveCost
+        am.additionRoute.truck.max_capacity -= am.addingNode.demand
+        self.total_profit += am.addingNode.profit
+
     def solve(self):
         """VRP Complete Solver"""
         self.initial_solution()
         self.relocation_LS()
+        self.add_nodes()
         self.print_solution()
         graph(self, self.routes)
