@@ -8,6 +8,20 @@ class Model:
         self.vehicles = 0
         self.capacity = 0
         self.time_limit = 0
+        self.new_matrix = []
+
+    def build_new_matrix(self):
+        """builds cost matrix"""
+        rows = len(self.all_nodes)
+        self.new_matrix = [[0.0 for x in range(rows)] for y in range(rows)]
+
+        for i in range(0, rows):
+            for j in range(1, len(self.all_nodes)):
+                a = self.all_nodes[i]
+                b = self.all_nodes[j]
+                dist = math.sqrt(math.pow(a.x - b.x, 2) + math.pow(a.y - b.y, 2))
+                mat = (dist + self.all_nodes[j].service_time + self.all_nodes[j].demand) / self.all_nodes[j].profit
+                self.new_matrix[i][j] = mat
 
     def build_cost_matrix(self):
         """builds cost matrix"""

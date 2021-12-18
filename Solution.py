@@ -79,6 +79,7 @@ class Solution:
         self.routes = [Route() for x in range(6)]
         self.matrix = model.matrix
         self.all_nodes = model.all_nodes
+        self.new_matrix = model.new_matrix
 
     def update_dependent(self, node_id, route):
         """Updates route dependent values, total profit and node is_routed flag"""
@@ -135,6 +136,35 @@ class Solution:
                     route.truck.max_duration -= self.matrix[route.nodes[-1]][0]
                     route.nodes.append(0)
                     route.returned = True
+
+    def initial_solution2(self):
+        for route in self.routes:
+            # route on the road
+            while not route.returned:  # next route waits for the previous to return
+                node_id = self.find_next_node2(route)
+                if node_id is not None:
+                    self.update_dependent(node_id, route)
+                else:
+                    route.truck.max_duration -= self.matrix[route.nodes[-1]][0]
+                    route.nodes.append(0)
+                    route.returned = True
+
+    def find_next_node2(self, route):
+        """Finds the next node to be visited"""
+        li = []
+        for i in range(1, len(self.new_matrix[route.nodes[-1]])):
+            temp = [self.new_matrix[route.nodes[-1]][i], i]
+            li.append(temp)
+        li = sorted(li)
+        for i in range(len(li)):
+            if not self.all_nodes[li[i][1]].is_routed \
+                    and route.truck.max_duration - self.all_nodes[li[i][1]].service_time \
+                    - self.matrix[route.nodes[-1]][li[i][1]] - self.matrix[li[i][1]][0] >= 0 \
+                    and route.truck.max_capacity - self.all_nodes[li[i][1]].demand >= 0:
+                return li[i][1]
+
+
+
 
     def relocation_LS(self):
         """Implements VRP Relocation Local Search"""
@@ -375,11 +405,15 @@ class Solution:
         am.additionRoute.truck.max_capacity -= am.addingNode.demand
         self.total_profit += am.addingNode.profit
 
+
+
     def solve(self):
         """VRP Complete Solver"""
-        self.initial_solution()
-        #self.relocation_LS()
+        #self.initial_solution()
+        self.initial_solution2()
+
         self.two_optLS()
+        #self.relocation_LS()
         self.add_nodes()
         # self.relocation_LS()
         self.print_solution()
