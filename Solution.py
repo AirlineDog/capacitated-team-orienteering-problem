@@ -3,6 +3,21 @@ from Graph import graph
 from Model import Route, Node
 
 
+class TwoOptMove(object):
+    def __init__(self):
+        self.positionOfFirstRoute = None
+        self.positionOfSecondRoute = None
+        self.positionOfFirstNode = None
+        self.positionOfSecondNode = None
+        self.moveCost = None
+    def Initialize(self):
+        self.positionOfFirstRoute = None
+        self.positionOfSecondRoute = None
+        self.positionOfFirstNode = None
+        self.positionOfSecondNode = None
+        self.moveCost = 10 ** 9
+
+
 class RelocationMove:
     def __init__(self):
         self.originRoutePosition = None
@@ -134,6 +149,125 @@ class Solution:
                 else:
                     termination = True
 
+    def two_optLS(self):
+        top = TwoOptMove()
+        terminationCondition = False
+        while terminationCondition is False:
+            top.Initialize()
+            self.FindBestTwoOptMove(top)
+            if top.positionOfFirstRoute is not None:
+                if top.moveCost < 0:
+                    self.ApplyTwoOptMove(top)
+                else:
+                    terminationCondition = True
+
+
+    def FindBestTwoOptMove(self, top):
+        for rtInd1 in range(0, len(self.routes)):
+            rt1: Route = self.routes[rtInd1]
+            for rtInd2 in range(rtInd1, len(self.routes)):
+                rt2: Route = self.routes[rtInd2]
+                for nodeInd1 in range(0, len(rt1.nodes) - 1):
+                    start2 = 0
+                    if rt1 == rt2:
+                        start2 = nodeInd1 + 2
+
+                    for nodeInd2 in range(start2, len(rt2.nodes) - 1):
+                        moveCost = 10 ** 9
+
+                        A = self.all_nodes[rt1.nodes[nodeInd1]]
+                        B = self.all_nodes[rt1.nodes[nodeInd1 + 1]]
+                        K = self.all_nodes[rt2.nodes[nodeInd2]]
+                        L = self.all_nodes[rt2.nodes[nodeInd2 + 1]]
+
+                        if rt1 == rt2:
+                            if nodeInd1 == 0 and nodeInd2 == len(rt1.nodes) - 2:
+                                continue
+                            costAdded = self.matrix[A.ID][K.ID] + self.matrix[B.ID][L.ID]
+                            costRemoved = self.matrix[A.ID][B.ID] + self.matrix[K.ID][L.ID]
+                            moveCost = costAdded - costRemoved
+                        else:
+                            if nodeInd1 == 0 and nodeInd2 == 0:
+                                continue
+                            if nodeInd1 == len(rt1.nodes) - 2 and nodeInd2 == len(rt2.nodes) - 2:
+                                continue
+
+                            if self.CapacityIsViolated(rt1, nodeInd1, rt2, nodeInd2):
+                                continue
+                            # if duration is violated
+                        if moveCost < top.moveCost:
+                            self.StoreBestTwoOptMove(rtInd1, rtInd2, nodeInd1, nodeInd2, moveCost, top)
+
+    def CapacityIsViolated(self, rt1, nodeInd1, rt2, nodeInd2):
+        rt1FirstSegmentLoad = 0
+        for i in range(0, nodeInd1 + 1):
+            n: Node = self.all_nodes[rt1.nodes[i]]
+            rt1FirstSegmentLoad += n.demand
+        rt1SecondSegmentLoad = 150 - rt1FirstSegmentLoad  # fix magic number
+
+        rt2FirstSegmentLoad = 0
+        for i in range(0, nodeInd2 + 1):
+            n = self.all_nodes[rt2.nodes[i]]
+            rt2FirstSegmentLoad += n.demand
+        rt2SecondSegmentLoad = 150 - rt2FirstSegmentLoad  # fix magic number
+
+        if rt1FirstSegmentLoad + rt2SecondSegmentLoad > rt1.truck.max_capacity:
+            return True
+        if rt2FirstSegmentLoad + rt1SecondSegmentLoad > rt2.truck.max_capacity:
+            return True
+
+        return False
+
+    def ApplyTwoOptMove(self, top):
+        rt1:Route = self.routes[top.positionOfFirstRoute]
+        rt2:Route = self.routes[top.positionOfSecondRoute]
+
+        if rt1 == rt2:
+            # reverses the nodes in the segment [positionOfFirstNode + 1,  top.positionOfSecondNode]
+            reversedSegment = reversed(rt1.nodes[top.positionOfFirstNode + 1: top.positionOfSecondNode + 1])
+            #lst = list(reversedSegment)
+            #lst2 = list(reversedSegment)
+            rt1.nodes[top.positionOfFirstNode + 1 : top.positionOfSecondNode + 1] = reversedSegment
+
+            #reversedSegmentList = list(reversed(rt1.sequenceOfNodes[top.positionOfFirstNode + 1: top.positionOfSecondNode + 1]))
+            #rt1.sequenceOfNodes[top.positionOfFirstNode + 1: top.positionOfSecondNode + 1] = reversedSegmentList
+
+            rt1.truck.max_duration -= top.moveCost
+
+        else:
+            #slice with the nodes from position top.positionOfFirstNode + 1 onwards
+            relocatedSegmentOfRt1 = rt1.nodes[top.positionOfFirstNode + 1 :]
+
+            #slice with the nodes from position top.positionOfFirstNode + 1 onwards
+            relocatedSegmentOfRt2 = rt2.nodes[top.positionOfSecondNode + 1 :]
+
+            del rt1.nodes[top.positionOfFirstNode + 1 :]
+            del rt2.nodes[top.positionOfSecondNode + 1 :]
+
+            rt1.nodes.extend(relocatedSegmentOfRt2)
+            rt2.nodes.extend(relocatedSegmentOfRt1)
+
+            self.UpdateRouteCostAndLoad(rt1)
+            self.UpdateRouteCostAndLoad(rt2)
+
+    def UpdateRouteCostAndLoad(self, rt: Route):
+        tc = 0
+        tl = 0
+        for i in range(0, len(rt.nodes) - 1):
+            A = rt.nodes[i]
+            B = rt.nodes[i + 1]
+            tc += self.matrix[A.ID][B.ID]
+            tl += A.demand
+        rt.truck.max_capacity = 150 - tl  # fix magic number
+        rt.truck.max_duration = 150 - tc  # fix magic number and add service time
+
+    def StoreBestTwoOptMove(self, rtInd1, rtInd2, nodeInd1, nodeInd2, moveCost, top):
+        top.positionOfFirstRoute = rtInd1
+        top.positionOfSecondRoute = rtInd2
+        top.positionOfFirstNode = nodeInd1
+        top.positionOfSecondNode = nodeInd2
+        top.moveCost = moveCost
+
     def find_best_relocation_move(self, rm):
         """Finds best relocation move"""
         for originRouteIndex in range(0, len(self.routes)):
@@ -244,8 +378,9 @@ class Solution:
     def solve(self):
         """VRP Complete Solver"""
         self.initial_solution()
-        self.relocation_LS()
+        #self.relocation_LS()
+        self.two_optLS()
         self.add_nodes()
-        self.relocation_LS()
+        # self.relocation_LS()
         self.print_solution()
         graph(self, self.routes)
