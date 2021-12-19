@@ -8,20 +8,20 @@ class Model:
         self.vehicles = 0
         self.capacity = 0
         self.time_limit = 0
-        self.new_matrix = []
+        self.selection_matrix = []
 
-    def build_new_matrix(self):
+    def build_selection_matrix(self):
         """builds cost matrix"""
         rows = len(self.all_nodes)
-        self.new_matrix = [[0.0 for x in range(rows)] for y in range(rows)]
+        self.selection_matrix = [[0.0 for x in range(rows)] for y in range(rows)]
 
         for i in range(0, rows):
-            for j in range(1, len(self.all_nodes)):
+            for j in range(1, rows):
                 a = self.all_nodes[i]
                 b = self.all_nodes[j]
                 dist = math.sqrt(math.pow(a.x - b.x, 2) + math.pow(a.y - b.y, 2))
-                mat = (dist + self.all_nodes[j].service_time + self.all_nodes[j].demand) / self.all_nodes[j].profit
-                self.new_matrix[i][j] = mat
+                value = (dist + self.all_nodes[j].service_time + self.all_nodes[j].demand) / self.all_nodes[j].profit
+                self.selection_matrix[i][j] = value
 
     def build_cost_matrix(self):
         """builds cost matrix"""
@@ -96,13 +96,15 @@ class Node:
 
 
 class Route:
-    def __init__(self):
-        self.truck = Truck()
+    def __init__(self, capacity, time_limit):
         self.nodes = [0]
         self.returned = False
+        self.max_capacity = capacity
+        self.max_duration = time_limit
+        self.truck = Truck(capacity, time_limit)
 
 
 class Truck:
-    def __init__(self):
-        self.max_capacity = 150
-        self.max_duration = 200
+    def __init__(self, capacity, time_limit):
+        self.capacity_left = capacity
+        self.duration_left = time_limit
