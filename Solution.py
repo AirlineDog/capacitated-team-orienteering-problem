@@ -1,3 +1,6 @@
+import random as rand
+from copy import deepcopy
+
 from Graph import graph
 from Model import Route, Node
 
@@ -141,6 +144,43 @@ class Solution:
                     and route.truck.capacity_left - self.all_nodes[min_li[i][1]].demand >= 0:
                 return min_li[i][1]
 
+    def initial_rand(self):
+        for route in self.routes:
+            # route on the road
+            while not route.returned:  # next route waits for the previous to return
+                node_id = self.find_next_node_rand(route)
+                if node_id is not None:
+                    self.update_dependent(node_id, route)
+                else:
+                    route.truck.duration_left -= self.matrix[route.nodes[-1]][0]
+                    route.nodes.append(0)
+                    route.returned = True
+
+    def find_next_node_rand(self, route):
+        """Finds the next node to be visited"""
+        min_li = [(value, i) for i, value in enumerate(self.selection_matrix[route.nodes[-1]][1:], start=1)]
+        min_li = sorted(min_li)
+        best_li = []
+        for i in range(len(min_li)):
+            if len(best_li) < 3:
+                if not self.all_nodes[min_li[i][1]].is_routed \
+                        and route.truck.duration_left - self.all_nodes[min_li[i][1]].service_time \
+                        - self.matrix[route.nodes[-1]][min_li[i][1]] - self.matrix[min_li[i][1]][0] >= 0 \
+                        and route.truck.capacity_left - self.all_nodes[min_li[i][1]].demand >= 0:
+                    best_li.append(min_li[i][1])
+            else:
+                break
+        if len(best_li) == 3:
+            best_index = rand.randint(0, 2)
+            return best_li[best_index]
+        elif len(best_li) == 2:
+            best_index = rand.randint(0, 1)
+            return best_li[best_index]
+        elif len(best_li) == 1:
+            return best_li[0]
+        else:
+            return None
+
     def relocation_LS(self):
         """Implements VRP Relocation Local Search"""
         rm = RelocationMove()
@@ -148,11 +188,13 @@ class Solution:
         while termination is False:
             rm.initialize()
             self.find_best_relocation_move(rm)
-            if rm.originRoutePosition is not None:
+            if rm.moveCost != 10**9:
                 if rm.moveCost < 0:
                     self.apply_relocation_move(rm)
                 else:
                     termination = True
+            else:
+                termination = True
 
     def two_optLS(self):
         top = TwoOptMove()
@@ -267,7 +309,6 @@ class Solution:
                 rt2: Route = self.routes[targetRouteIndex]
                 for originNodeIndex in range(1, len(rt1.nodes) - 1):
                     for targetNodeIndex in range(0, len(rt2.nodes) - 1):
-
                         if originRouteIndex == targetRouteIndex and (
                                 targetNodeIndex == originNodeIndex or targetNodeIndex == originNodeIndex - 1):
                             continue
@@ -368,13 +409,22 @@ class Solution:
         self.total_profit += am.addingNode.profit
 
     def solve(self):
+        # 20 1066 88/100
+        rand.seed(20)
         """VRP Complete Solver"""
-        self.initial_solution()
-        self.relocation_LS()
-        self.two_optLS()
-        self.add_nodes()
-        self.relocation_LS()
-        self.two_optLS()
-        self.add_nodes()
+        #self.initial_solution()
+        n = 500
+        sols = [deepcopy(self) for x in range(n)]
+        for i in range(n):
+            sol = sols[i]
+            sol.initial_rand()
+            sol.relocation_LS()
+            sol.two_optLS()
+            sol.add_nodes()
+            if sol.total_profit > self.total_profit:
+                self = sol
+            print(sol.total_profit, i)
+        max_sol = max(sols, key=lambda x: x.total_profit)
+        print(max_sol.total_profit, sols.index(max_sol))
         self.print_solution()
         graph(self, self.routes)
