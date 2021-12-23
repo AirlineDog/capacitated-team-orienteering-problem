@@ -98,6 +98,7 @@ def test_solution(file_name, all_nodes, vehicles, capacity, time_limit):
         return
 
     line_counter = 3
+    routed_nodes = []
     for i in range(vehs_used):
         ln = all_lines[line_counter]
         ln = ln.replace('\t', ' ')
@@ -116,6 +117,11 @@ def test_solution(file_name, all_nodes, vehicles, capacity, time_limit):
             return
         profit_calculated += rt_profit
         line_counter += 2
+        for node in nodes_sequence[1:-1]:
+            routed_nodes.append(node.ID)
+    if len(set(routed_nodes)) < len(routed_nodes):
+        print('Nodes revisited')
+        return
     if profit_calculated != profit_reported:
         print('Profit Inconsistency. Profit Reported', profit_reported, '--- Profit Calculated', profit_calculated)
         return

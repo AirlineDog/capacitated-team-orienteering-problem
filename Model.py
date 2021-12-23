@@ -1,5 +1,7 @@
 import math
 
+import numpy as np
+
 
 class Model:
     def __init__(self):
@@ -9,6 +11,11 @@ class Model:
         self.capacity = 0
         self.time_limit = 0
         self.selection_matrix = []
+        self.std_dist = []
+
+    def built_std_dist(self):
+        for node in self.matrix:
+            self.std_dist.append(np.std(node)*0.8)
 
     def build_selection_matrix(self):
         """builds cost matrix"""

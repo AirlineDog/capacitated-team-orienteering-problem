@@ -1,7 +1,4 @@
 import random as rand
-from copy import deepcopy
-
-from Graph import graph
 from Model import Route, Node
 
 
@@ -82,6 +79,32 @@ class AdditionMove:
         self.moveCost = moveCost
 
 
+class DestroyRepair:
+    def __init__(self):
+        self.route = None
+        self.rm_node = None
+        self.add_node = None
+        self.cost = None
+        self.new_demand = None
+        self.new_profit = None
+
+    def initialize(self):
+        self.route = None
+        self.rm_node = None
+        self.add_node = None
+        self.cost = None
+        self.new_demand = None
+        self.new_profit = 0
+
+    def store_best_destroy_repair(self, route, rm_node, add_node, cost, new_demand, new_profit):
+        self.route = route
+        self.rm_node = rm_node
+        self.add_node = add_node
+        self.cost = cost
+        self.new_demand = new_demand
+        self.new_profit = new_profit
+
+
 class Solution:
 
     def __init__(self, model):
@@ -93,16 +116,19 @@ class Solution:
         self.matrix = model.matrix
         self.all_nodes = model.all_nodes
         self.selection_matrix = model.selection_matrix
+        self.std_dist = model.std_dist
 
-    def update_dependent(self, node_id, route):
-        """Updates route dependent values, total profit and node is_routed flag"""
-        node = self.all_nodes[node_id]
-        node.is_routed = True
-        self.total_profit += node.profit
-        route.profit += node.profit
-        route.truck.capacity_left -= node.demand
-        route.truck.duration_left -= node.service_time + self.matrix[route.nodes[-1]][node.ID]
-        route.nodes.append(node_id)
+    def initialize(self, model):
+        self.total_profit = 0
+        self.vehicles = model.vehicles
+        self.capacity = model.capacity
+        self.time_limit = model.time_limit
+        self.routes = [Route(self.capacity, self.time_limit) for x in range(self.vehicles)]
+        self.matrix = model.matrix
+        self.all_nodes = model.all_nodes
+        self.selection_matrix = model.selection_matrix
+        for node in self.all_nodes[1:]:
+            node.is_routed = False
 
     def print_solution(self):
         """Prints final solution"""
@@ -117,32 +143,6 @@ class Solution:
                 nodes = nodes.strip()
                 f.write(nodes)
                 f.write("\n")
-                # debug purposes
-                # print("Duration left :" + str(self.routes[i].truck.max_duration))
-                # print("Capacity left :" + str(self.routes[i].truck.max_capacity))
-
-    def initial_solution(self):
-        for route in self.routes:
-            # route on the road
-            while not route.returned:  # next route waits for the previous to return
-                node_id = self.find_next_node(route)
-                if node_id is not None:
-                    self.update_dependent(node_id, route)
-                else:
-                    route.truck.duration_left -= self.matrix[route.nodes[-1]][0]
-                    route.nodes.append(0)
-                    route.returned = True
-
-    def find_next_node(self, route):
-        """Finds the next node to be visited"""
-        min_li = [(value, i) for i, value in enumerate(self.selection_matrix[route.nodes[-1]][1:], start=1)]
-        min_li = sorted(min_li)
-        for i in range(len(min_li)):
-            if not self.all_nodes[min_li[i][1]].is_routed \
-                    and route.truck.duration_left - self.all_nodes[min_li[i][1]].service_time \
-                    - self.matrix[route.nodes[-1]][min_li[i][1]] - self.matrix[min_li[i][1]][0] >= 0 \
-                    and route.truck.capacity_left - self.all_nodes[min_li[i][1]].demand >= 0:
-                return min_li[i][1]
 
     def initial_rand(self):
         for route in self.routes:
@@ -162,7 +162,7 @@ class Solution:
         min_li = sorted(min_li)
         best_li = []
         for i in range(len(min_li)):
-            if len(best_li) < 3:
+            if len(best_li) < 8:
                 if not self.all_nodes[min_li[i][1]].is_routed \
                         and route.truck.duration_left - self.all_nodes[min_li[i][1]].service_time \
                         - self.matrix[route.nodes[-1]][min_li[i][1]] - self.matrix[min_li[i][1]][0] >= 0 \
@@ -170,16 +170,23 @@ class Solution:
                     best_li.append(min_li[i][1])
             else:
                 break
-        if len(best_li) == 3:
-            best_index = rand.randint(0, 2)
-            return best_li[best_index]
-        elif len(best_li) == 2:
-            best_index = rand.randint(0, 1)
-            return best_li[best_index]
-        elif len(best_li) == 1:
-            return best_li[0]
+        population = [0, 1, 2, 3, 4, 5]
+        weights = [0.35, 0.25, 0.20, 0.10, 0.05, 0.05]
+        if best_li:
+            best_index = rand.choices(population[:len(best_li)], weights[:len(best_li)])
+            return best_li[best_index[0]]
         else:
             return None
+
+    def update_dependent(self, node_id, route):
+        """Updates route dependent values, total profit and node is_routed flag"""
+        node = self.all_nodes[node_id]
+        node.is_routed = True
+        self.total_profit += node.profit
+        route.profit += node.profit
+        route.truck.capacity_left -= node.demand
+        route.truck.duration_left -= node.service_time + self.matrix[route.nodes[-1]][node.ID]
+        route.nodes.append(node_id)
 
     def relocation_LS(self):
         """Implements VRP Relocation Local Search"""
@@ -188,13 +195,82 @@ class Solution:
         while termination is False:
             rm.initialize()
             self.find_best_relocation_move(rm)
-            if rm.moveCost != 10**9:
-                if rm.moveCost < 0:
+            if rm.moveCost != 10 ** 9:
+                if rm.moveCost < -0.01:
                     self.apply_relocation_move(rm)
                 else:
                     termination = True
             else:
                 termination = True
+
+    def find_best_relocation_move(self, rm):
+        """Finds best relocation move"""
+        for originRouteIndex in range(0, len(self.routes)):
+            rt1: Route = self.routes[originRouteIndex]
+            for targetRouteIndex in range(0, len(self.routes)):
+                rt2: Route = self.routes[targetRouteIndex]
+                for originNodeIndex in range(1, len(rt1.nodes) - 1):
+                    for targetNodeIndex in range(0, len(rt2.nodes) - 1):
+                        # if self.matrix[originNodeIndex][targetNodeIndex] > 50:
+                        #     continue
+                        if originRouteIndex == targetRouteIndex and (
+                                targetNodeIndex == originNodeIndex or targetNodeIndex == originNodeIndex - 1):
+                            continue
+
+                        # Origin nodes (B is to be changed)
+                        A: Node = self.all_nodes[rt1.nodes[originNodeIndex - 1]]
+                        B: Node = self.all_nodes[rt1.nodes[originNodeIndex]]
+                        C: Node = self.all_nodes[rt1.nodes[originNodeIndex + 1]]
+                        # Target Nodes
+                        F: Node = self.all_nodes[rt2.nodes[targetNodeIndex]]
+                        G: Node = self.all_nodes[rt2.nodes[targetNodeIndex + 1]]
+
+                        # route not out of capacity
+                        if rt1 != rt2:
+                            if rt2.truck.capacity_left - B.demand < 0:
+                                continue
+
+                        # Distance costs
+                        costAdded = self.matrix[A.ID][C.ID] + self.matrix[F.ID][B.ID] + self.matrix[B.ID][G.ID]
+                        costRemoved = self.matrix[A.ID][B.ID] + self.matrix[B.ID][C.ID] + self.matrix[F.ID][G.ID]
+
+                        moveCost = costAdded - costRemoved
+
+                        # finds minimum moveCost
+                        if moveCost < rm.moveCost:
+                            # Distance + service time costs
+                            originRtCostChange = self.matrix[A.ID][C.ID] \
+                                                 - self.matrix[A.ID][B.ID] - self.matrix[B.ID][C.ID] - B.service_time
+                            targetRtCostChange = self.matrix[F.ID][B.ID] + self.matrix[B.ID][G.ID] \
+                                                 - self.matrix[F.ID][G.ID] + B.service_time
+                            # route not out of time
+                            if rt2.truck.duration_left - targetRtCostChange > 0:
+                                rm.store_best_relocation_move(originRouteIndex, targetRouteIndex, originNodeIndex,
+                                                              targetNodeIndex, moveCost, originRtCostChange,
+                                                              targetRtCostChange)
+
+    def apply_relocation_move(self, rm: RelocationMove):
+        originRt: Route = self.routes[rm.originRoutePosition]
+        targetRt: Route = self.routes[rm.targetRoutePosition]
+
+        # Changing node ID
+        B: int = originRt.nodes[rm.originNodePosition]
+
+        if originRt == targetRt:
+            del originRt.nodes[rm.originNodePosition]
+            if rm.originNodePosition < rm.targetNodePosition:
+                targetRt.nodes.insert(rm.targetNodePosition, B)
+            else:
+                targetRt.nodes.insert(rm.targetNodePosition + 1, B)
+
+            originRt.truck.duration_left -= rm.moveCost
+        else:
+            del originRt.nodes[rm.originNodePosition]
+            targetRt.nodes.insert(rm.targetNodePosition + 1, B)
+            originRt.truck.duration_left -= rm.costChangeOriginRt
+            targetRt.truck.duration_left -= rm.costChangeTargetRt
+            originRt.truck.capacity_left += self.all_nodes[B].demand
+            targetRt.truck.capacity_left -= self.all_nodes[B].demand
 
     def two_optLS(self):
         top = TwoOptMove()
@@ -219,6 +295,8 @@ class Solution:
                         start2 = nodeInd1 + 2
 
                     for nodeInd2 in range(start2, len(rt2.nodes) - 1):
+                        # if self.matrix[nodeInd1][nodeInd2] > 50:
+                        #     continue
                         moveCost = 10 ** 9
 
                         A = self.all_nodes[rt1.nodes[nodeInd1]]
@@ -301,73 +379,6 @@ class Solution:
         rt.truck.capacity_left = rt.max_capacity - tl
         rt.truck.duration_left = rt.max_duration - tc
 
-    def find_best_relocation_move(self, rm):
-        """Finds best relocation move"""
-        for originRouteIndex in range(0, len(self.routes)):
-            rt1: Route = self.routes[originRouteIndex]
-            for targetRouteIndex in range(0, len(self.routes)):
-                rt2: Route = self.routes[targetRouteIndex]
-                for originNodeIndex in range(1, len(rt1.nodes) - 1):
-                    for targetNodeIndex in range(0, len(rt2.nodes) - 1):
-                        if originRouteIndex == targetRouteIndex and (
-                                targetNodeIndex == originNodeIndex or targetNodeIndex == originNodeIndex - 1):
-                            continue
-
-                        # Origin nodes (B is to be changed)
-                        A: Node = self.all_nodes[rt1.nodes[originNodeIndex - 1]]
-                        B: Node = self.all_nodes[rt1.nodes[originNodeIndex]]
-                        C: Node = self.all_nodes[rt1.nodes[originNodeIndex + 1]]
-                        # Target Nodes
-                        F: Node = self.all_nodes[rt2.nodes[targetNodeIndex]]
-                        G: Node = self.all_nodes[rt2.nodes[targetNodeIndex + 1]]
-
-                        # route not out of capacity
-                        if rt1 != rt2:
-                            if rt2.truck.capacity_left - B.demand < 0:
-                                continue
-
-                        # Distance costs
-                        costAdded = self.matrix[A.ID][C.ID] + self.matrix[F.ID][B.ID] + self.matrix[B.ID][G.ID]
-                        costRemoved = self.matrix[A.ID][B.ID] + self.matrix[B.ID][C.ID] + self.matrix[F.ID][G.ID]
-
-                        moveCost = costAdded - costRemoved
-
-                        # finds minimum moveCost
-                        if moveCost < rm.moveCost:
-                            # Distance + service time costs
-                            originRtCostChange = self.matrix[A.ID][C.ID] \
-                                                 - self.matrix[A.ID][B.ID] - self.matrix[B.ID][C.ID] - B.service_time
-                            targetRtCostChange = self.matrix[F.ID][B.ID] + self.matrix[B.ID][G.ID] \
-                                                 - self.matrix[F.ID][G.ID] + B.service_time
-                            # route not out of time
-                            if rt2.truck.duration_left - targetRtCostChange > 0:
-                                rm.store_best_relocation_move(originRouteIndex, targetRouteIndex, originNodeIndex,
-                                                              targetNodeIndex, moveCost, originRtCostChange,
-                                                              targetRtCostChange)
-
-    def apply_relocation_move(self, rm: RelocationMove):
-        originRt: Route = self.routes[rm.originRoutePosition]
-        targetRt: Route = self.routes[rm.targetRoutePosition]
-
-        # Changing node ID
-        B: int = originRt.nodes[rm.originNodePosition]
-
-        if originRt == targetRt:
-            del originRt.nodes[rm.originNodePosition]
-            if rm.originNodePosition < rm.targetNodePosition:
-                targetRt.nodes.insert(rm.targetNodePosition, B)
-            else:
-                targetRt.nodes.insert(rm.targetNodePosition + 1, B)
-
-            originRt.truck.duration_left -= rm.moveCost
-        else:
-            del originRt.nodes[rm.originNodePosition]
-            targetRt.nodes.insert(rm.targetNodePosition + 1, B)
-            originRt.truck.duration_left -= rm.costChangeOriginRt
-            targetRt.truck.duration_left -= rm.costChangeTargetRt
-            originRt.truck.capacity_left += self.all_nodes[B].demand
-            targetRt.truck.capacity_left -= self.all_nodes[B].demand
-
     def add_nodes(self):
         am = AdditionMove()
         for route in self.routes:
@@ -375,27 +386,29 @@ class Solution:
             while not flag:
                 am.initialize()
                 max_overall = -1
-                for node in self.all_nodes:
-                    if not node.is_routed:
-                        max_prof = -2
-                        position = 0
-                        move_cost = 0
-                        for place in range(len(route.nodes) - 1):
-                            costRemoved = self.matrix[route.nodes[place]][route.nodes[place + 1]]
-                            costAdded = self.matrix[route.nodes[place]][node.ID] + self.matrix[node.ID][
-                                route.nodes[place + 1]]
-                            cost = costAdded - costRemoved + node.service_time
-                            # enough duration and capacity
-                            if cost < route.truck.duration_left \
-                                    and node.demand < route.truck.capacity_left:
-                                # selection condition
-                                if node.profit > max_prof:
-                                    max_prof = node.profit
-                                    position = place
-                                    move_cost = cost
-                        if max_prof > max_overall:
-                            max_overall = max_prof
-                            am.store_best_addition_move(route, node, position, move_cost)
+                for place in range(len(route.nodes) - 1):
+                    max_prof = -2
+                    position = 0
+                    move_cost = 0
+                    for i in range(len(self.all_nodes)):
+                        if self.matrix[route.nodes[place]][i] < 50:
+                            node = self.all_nodes[i]
+                            if not node.is_routed:
+                                costRemoved = self.matrix[route.nodes[place]][route.nodes[place + 1]]
+                                costAdded = self.matrix[route.nodes[place]][node.ID] + self.matrix[node.ID][
+                                    route.nodes[place + 1]]
+                                cost = costAdded - costRemoved + node.service_time
+                                # enough duration and capacity
+                                if cost < route.truck.duration_left \
+                                        and node.demand < route.truck.capacity_left:
+                                    # selection condition
+                                    if node.profit > max_prof:
+                                        max_prof = node.profit
+                                        position = place
+                                        move_cost = cost
+                            if max_prof > max_overall:
+                                max_overall = max_prof
+                                am.store_best_addition_move(route, node, position, move_cost)
                 if max_overall != -1:
                     self.apply_add_node(am)
                 else:
@@ -407,24 +420,53 @@ class Solution:
         am.additionRoute.truck.capacity_left -= am.addingNode.demand
         am.additionRoute.profit += am.addingNode.profit
         self.total_profit += am.addingNode.profit
+        am.addingNode.is_routed = True
+
+    def destroy_and_repair(self):
+        dr = DestroyRepair()
+        for route in self.routes:
+            for i in range(1, len(route.nodes) - 1):
+                rm_node: int = route.nodes[i]
+                dr.initialize()
+                for j in range(len(self.all_nodes)):
+                    node: Node = self.all_nodes[j]
+                    if self.matrix[rm_node][node.ID] > 50:
+                        continue
+                    if not node.is_routed:
+                        add_node: int = node.ID
+                        rm_cost = self.matrix[route.nodes[i - 1]][rm_node] + self.matrix[rm_node][route.nodes[i + 1]] \
+                                  + self.all_nodes[rm_node].service_time
+                        add_cost = self.matrix[route.nodes[i - 1]][add_node] + self.matrix[add_node][route.nodes[i + 1]] \
+                                   + self.all_nodes[add_node].service_time
+                        cost = add_cost - rm_cost
+                        new_demand = self.all_nodes[add_node].demand - self.all_nodes[rm_node].demand
+                        new_profit = self.all_nodes[add_node].profit - self.all_nodes[rm_node].profit
+                        if route.truck.capacity_left > new_demand and new_profit > dr.new_profit and route.truck.duration_left > cost:
+                            dr.store_best_destroy_repair(route, rm_node, add_node, cost, new_demand, new_profit)
+                if dr.route is not None:
+                    self.apply_destroy_repair(dr)
+
+    def apply_destroy_repair(self, dr):
+        dr.route.nodes = [dr.add_node if x == dr.rm_node else x for x in dr.route.nodes]
+        self.all_nodes[dr.rm_node].is_routed = False
+        self.all_nodes[dr.add_node].is_routed = True
+        dr.route.profit += dr.new_profit
+        self.total_profit += dr.new_profit
+        dr.route.truck.duration_left -= dr.cost
+        dr.route.truck.capacity_left -= dr.new_demand
 
     def solve(self):
-        # 20 1066 88/100
-        rand.seed(20)
         """VRP Complete Solver"""
-        #self.initial_solution()
-        n = 500
-        sols = [deepcopy(self) for x in range(n)]
-        for i in range(n):
-            sol = sols[i]
-            sol.initial_rand()
-            sol.relocation_LS()
-            sol.two_optLS()
-            sol.add_nodes()
-            if sol.total_profit > self.total_profit:
-                self = sol
-            print(sol.total_profit, i)
-        max_sol = max(sols, key=lambda x: x.total_profit)
-        print(max_sol.total_profit, sols.index(max_sol))
-        self.print_solution()
-        graph(self, self.routes)
+        # self.initial_solution()
+        self.initial_rand()
+        flag = True
+        prof = self.total_profit
+        while flag:
+            self.relocation_LS()
+            self.two_optLS()
+            self.add_nodes()
+            self.destroy_and_repair()
+            if prof == self.total_profit:
+                flag = False
+            else:
+                prof = self.total_profit
