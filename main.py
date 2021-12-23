@@ -10,10 +10,8 @@ mod = Model()
 mod.load_model("Instance.txt")
 mod.build_cost_matrix()
 mod.build_selection_matrix()
-mod.built_std_dist()
-
 s = Solution(mod)
-n = 2000
+n = 550
 test_sol = Solution(mod)
 test_sol.initialize(mod)
 pos = 0
