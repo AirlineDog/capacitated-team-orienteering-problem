@@ -11,7 +11,7 @@ mod.load_model("Instance.txt")
 mod.build_cost_matrix()
 mod.build_selection_matrix()
 s = Solution(mod)
-n = 550
+n = 50
 test_sol = Solution(mod)
 test_sol.initialize(mod)
 pos = 0

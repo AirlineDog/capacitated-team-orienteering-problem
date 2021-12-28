@@ -176,7 +176,7 @@ class Solution:
                 break
         # randomly select one of the best nodes
         population = [0, 1, 2, 3, 4, 5]
-        weights = [0.35, 0.25, 0.20, 0.10, 0.05, 0.05]
+        weights = [6, 5, 4, 3, 2, 1]
         if best_li:
             rand_index = rand.choices(population[:len(best_li)], weights[:len(best_li)])
             return best_li[rand_index[0]]
