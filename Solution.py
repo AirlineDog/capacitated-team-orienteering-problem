@@ -289,6 +289,9 @@ class Solution:
 
     def find_best_two_opt_move(self, top):
         """Finds best 2opt move"""
+        for route in self.routes:
+            for node_id in route.nodes[1:]:
+                route.segment_load.append(sum(route.segment_load) + self.all_nodes[node_id].demand)
         for rtInd1 in range(0, len(self.routes)):
             rt1: Route = self.routes[rtInd1]
             for rtInd2 in range(rtInd1, len(self.routes)):
@@ -328,16 +331,10 @@ class Solution:
 
     def capacity_is_violated(self, rt1, nodeInd1, rt2, nodeInd2):
         """Checks if capacity is violated"""
-        rt1FirstSegmentLoad = 0
-        for i in range(0, nodeInd1 + 1):
-            n: Node = self.all_nodes[rt1.nodes[i]]
-            rt1FirstSegmentLoad += n.demand
+        rt1FirstSegmentLoad = rt1.segment_load[nodeInd1]
         rt1SecondSegmentLoad = rt1.max_capacity - rt1FirstSegmentLoad
 
-        rt2FirstSegmentLoad = 0
-        for i in range(0, nodeInd2 + 1):
-            n = self.all_nodes[rt2.nodes[i]]
-            rt2FirstSegmentLoad += n.demand
+        rt2FirstSegmentLoad = rt2.segment_load[nodeInd2]
         rt2SecondSegmentLoad = rt2.max_capacity - rt2FirstSegmentLoad
         if rt1FirstSegmentLoad + rt2SecondSegmentLoad > rt1.truck.capacity_left:
             return True

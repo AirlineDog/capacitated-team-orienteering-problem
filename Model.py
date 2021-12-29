@@ -103,6 +103,7 @@ class Route:
         self.max_duration = time_limit
         self.truck = Truck(capacity, time_limit)
         self.profit = 0
+        self.segment_load = [0]
 
 
 class Truck:

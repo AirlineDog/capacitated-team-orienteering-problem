@@ -26,7 +26,6 @@ for i in range(n):
     print(test_sol.total_profit, i)
 print("finish")
 print(s.total_profit, pos)
-s.two_optLS()
 s.print_solution()
 end = time.time()
 print(end-start)
