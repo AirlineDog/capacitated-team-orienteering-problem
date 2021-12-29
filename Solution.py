@@ -16,7 +16,7 @@ class TwoOptMove(object):
         self.positionOfSecondRoute = None
         self.positionOfFirstNode = None
         self.positionOfSecondNode = None
-        self.moveCost = 10 ** 9
+        self.moveCost = 0
 
     def store_best_two_opt_move(self, rtInd1, rtInd2, nodeInd1, nodeInd2, moveCost):
         self.positionOfFirstRoute = rtInd1
@@ -44,7 +44,7 @@ class RelocationMove:
         self.targetNodePosition = None
         self.costChangeOriginRt = None
         self.costChangeTargetRt = None
-        self.moveCost = 10 ** 9
+        self.moveCost = 0
 
     def store_best_relocation_move(self, originRouteIndex, targetRouteIndex, originNodeIndex, targetNodeIndex,
                                    moveCost, originRtCostChange, targetRtCostChange):
@@ -200,11 +200,8 @@ class Solution:
         while termination is False:
             rm.initialize()
             self.find_best_relocation_move(rm)
-            if rm.moveCost != 10 ** 9:
-                if rm.moveCost < -0.01:
-                    self.apply_relocation_move(rm)
-                else:
-                    termination = True
+            if rm.moveCost < 0:
+                self.apply_relocation_move(rm)
             else:
                 termination = True
 
@@ -285,11 +282,10 @@ class Solution:
         while terminationCondition is False:
             top.initialize()
             self.find_best_two_opt_move(top)
-            if top.positionOfFirstRoute is not None:
-                if top.moveCost < 0:
-                    self.apply_two_opt_move(top)
-                else:
-                    terminationCondition = True
+            if top.moveCost < 0:
+                self.apply_two_opt_move(top)
+            else:
+                terminationCondition = True
 
     def find_best_two_opt_move(self, top):
         """Finds best 2opt move"""
@@ -444,7 +440,7 @@ class Solution:
                 dr.initialize()
                 for j in range(len(self.all_nodes)):
                     node: Node = self.all_nodes[j]
-                    if self.matrix[rm_node][node.ID] > 50:
+                    if self.matrix[rm_node][node.ID] > 20:
                         continue
                     if not node.is_routed:
                         add_node: int = node.ID
@@ -480,7 +476,6 @@ class Solution:
             self.relocation_LS()
             self.two_optLS()
             self.add_nodes()
-            self.destroy_and_repair()
             if prof == self.total_profit:
                 flag = False
             else:
