@@ -440,19 +440,18 @@ class Solution:
                 dr.initialize()
                 for j in range(len(self.all_nodes)):
                     node: Node = self.all_nodes[j]
-                    if self.matrix[rm_node][node.ID] > 20:
+                    add_node = j
+                    new_profit = node.profit - self.all_nodes[rm_node].profit
+                    if not node.is_routed or self.matrix[rm_node][add_node] > 20 or new_profit < 0:
                         continue
-                    if not node.is_routed:
-                        add_node: int = node.ID
-                        rm_cost = self.matrix[route.nodes[i - 1]][rm_node] + self.matrix[rm_node][route.nodes[i + 1]] \
-                                  + self.all_nodes[rm_node].service_time
-                        add_cost = self.matrix[route.nodes[i - 1]][add_node] + self.matrix[add_node][route.nodes[i + 1]] \
-                                   + self.all_nodes[add_node].service_time
-                        cost = add_cost - rm_cost
-                        new_demand = self.all_nodes[add_node].demand - self.all_nodes[rm_node].demand
-                        new_profit = self.all_nodes[add_node].profit - self.all_nodes[rm_node].profit
-                        if route.truck.capacity_left > new_demand and new_profit > dr.new_profit and route.truck.duration_left > cost:
-                            dr.store_best_destroy_repair(route, rm_node, add_node, cost, new_demand, new_profit)
+                    rm_cost = self.matrix[route.nodes[i - 1]][rm_node] + self.matrix[rm_node][route.nodes[i + 1]] \
+                              + self.all_nodes[rm_node].service_time
+                    add_cost = self.matrix[route.nodes[i - 1]][add_node] + self.matrix[add_node][route.nodes[i + 1]] \
+                               + self.all_nodes[add_node].service_time
+                    cost = add_cost - rm_cost
+                    new_demand = self.all_nodes[add_node].demand - self.all_nodes[rm_node].demand
+                    if route.truck.capacity_left > new_demand and new_profit > dr.new_profit and route.truck.duration_left > cost:
+                        dr.store_best_destroy_repair(route, rm_node, add_node, cost, new_demand, new_profit)
                 if dr.route is not None:
                     self.apply_destroy_repair(dr)
 
