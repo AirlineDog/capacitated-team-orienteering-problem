@@ -91,6 +91,8 @@ class DestroyRepair:
         self.cost = None
         self.new_demand = None
         self.new_profit = None
+        self.in_place = None
+        self.out_place = None
 
     def initialize(self):
         self.route = None
@@ -99,14 +101,18 @@ class DestroyRepair:
         self.cost = None
         self.new_demand = None
         self.new_profit = 0
+        self.in_place = None
+        self.out_place = None
 
-    def store_best_destroy_repair(self, route, rm_node, add_node, cost, new_demand, new_profit):
+    def store_best_destroy_repair(self, route, rm_node, add_node, cost, new_demand, new_profit, in_place, out_place):
         self.route = route
         self.rm_node = rm_node
         self.add_node = add_node
         self.cost = cost
         self.new_demand = new_demand
         self.new_profit = new_profit
+        self.in_place = in_place
+        self.out_place = out_place
 
 
 class Solution:
@@ -200,7 +206,7 @@ class Solution:
         while termination is False:
             rm.initialize()
             self.find_best_relocation_move(rm)
-            if rm.moveCost < 0:
+            if rm.moveCost < -0.01:
                 self.apply_relocation_move(rm)
             else:
                 termination = True
@@ -282,7 +288,9 @@ class Solution:
         while terminationCondition is False:
             top.initialize()
             self.find_best_two_opt_move(top)
-            if top.moveCost < 0:
+            for route in self.routes:
+                route.segment_load = [0]
+            if top.moveCost < -0.01:
                 self.apply_two_opt_move(top)
             else:
                 terminationCondition = True
@@ -291,7 +299,7 @@ class Solution:
         """Finds best 2opt move"""
         for route in self.routes:
             for node_id in route.nodes[1:]:
-                route.segment_load.append(sum(route.segment_load) + self.all_nodes[node_id].demand)
+                route.segment_load.append(route.segment_load[-1] + self.all_nodes[node_id].demand)
         for rtInd1 in range(0, len(self.routes)):
             rt1: Route = self.routes[rtInd1]
             for rtInd2 in range(rtInd1, len(self.routes)):
@@ -439,22 +447,34 @@ class Solution:
                     node: Node = self.all_nodes[j]
                     add_node = j
                     new_profit = node.profit - self.all_nodes[rm_node].profit
-                    if not node.is_routed or self.matrix[rm_node][add_node] > 20 or new_profit < 0:
+                    new_demand = self.all_nodes[add_node].demand - self.all_nodes[rm_node].demand
+                    if node.is_routed or self.matrix[rm_node][add_node] > 50 or new_profit < dr.new_profit \
+                            or route.truck.capacity_left < new_demand:
                         continue
                     rm_cost = self.matrix[route.nodes[i - 1]][rm_node] + self.matrix[rm_node][route.nodes[i + 1]] \
                               + self.all_nodes[rm_node].service_time
-                    add_cost = self.matrix[route.nodes[i - 1]][add_node] + self.matrix[add_node][route.nodes[i + 1]] \
-                               + self.all_nodes[add_node].service_time
-                    cost = add_cost - rm_cost
-                    new_demand = self.all_nodes[add_node].demand - self.all_nodes[rm_node].demand
-                    if route.truck.capacity_left > new_demand and new_profit > dr.new_profit and route.truck.duration_left > cost:
-                        dr.store_best_destroy_repair(route, rm_node, add_node, cost, new_demand, new_profit)
+                    add_cost = self.matrix[route.nodes[i - 1]][route.nodes[i + 1]]
+                    for place in range(len(route.nodes)-1):
+                        if place == i or place == i-1:
+                            continue
+                        else:
+                            add_cost += self.matrix[route.nodes[place]][add_node] \
+                                       + self.matrix[add_node][route.nodes[place + 1]] \
+                                       + self.all_nodes[add_node].service_time
+                            rm_cost += self.matrix[route.nodes[place]][route.nodes[place + 1]]
+                        cost = add_cost - rm_cost
+                        if route.truck.duration_left > cost:
+                            dr.store_best_destroy_repair(route, rm_node, add_node, cost, new_demand, new_profit, place, i)
                 if dr.route is not None:
                     self.apply_destroy_repair(dr)
 
     def apply_destroy_repair(self, dr):
         """Applies the destroy & repair step"""
-        dr.route.nodes = [dr.add_node if x == dr.rm_node else x for x in dr.route.nodes]
+        del dr.route.nodes[dr.out_place]
+        if dr.out_place <= dr.in_place:
+            dr.route.nodes.insert(dr.in_place, dr.add_node)
+        else:
+            dr.route.nodes.insert(dr.in_place + 1, dr.add_node)
         self.all_nodes[dr.rm_node].is_routed = False
         self.all_nodes[dr.add_node].is_routed = True
         dr.route.profit += dr.new_profit
@@ -472,6 +492,7 @@ class Solution:
             self.relocation_LS()
             self.two_optLS()
             self.add_nodes()
+            self.destroy_and_repair()
             if prof == self.total_profit:
                 flag = False
             else:
