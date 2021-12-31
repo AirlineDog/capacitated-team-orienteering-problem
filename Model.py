@@ -10,30 +10,20 @@ class Model:
         self.time_limit = 0
         self.selection_matrix = []
 
-    def build_selection_matrix(self):
-        """builds cost matrix"""
-        rows = len(self.all_nodes)
-        self.selection_matrix = [[0.0 for x in range(rows)] for y in range(rows)]
-
-        for i in range(0, rows):
-            for j in range(1, rows):
-                a = self.all_nodes[i]
-                b = self.all_nodes[j]
-                dist = math.sqrt(math.pow(a.x - b.x, 2) + math.pow(a.y - b.y, 2))
-                value = (dist + self.all_nodes[j].service_time + self.all_nodes[j].demand) / self.all_nodes[j].profit
-                self.selection_matrix[i][j] = value
-
-    def build_cost_matrix(self):
-        """builds cost matrix"""
+    def build_matrices(self):
         rows = len(self.all_nodes)
         self.matrix = [[0.0 for x in range(rows)] for y in range(rows)]
-
+        self.selection_matrix = [[0.0 for x in range(rows)] for y in range(rows)]
         for i in range(0, rows):
-            for j in range(0, len(self.all_nodes)):
-                a = self.all_nodes[i]
+            a = self.all_nodes[i]
+            dist = math.sqrt(math.pow(a.x - self.all_nodes[0].x, 2) + math.pow(a.y - self.all_nodes[0].y, 2))
+            self.matrix[i][0] = dist
+            for j in range(1, rows):
                 b = self.all_nodes[j]
                 dist = math.sqrt(math.pow(a.x - b.x, 2) + math.pow(a.y - b.y, 2))
                 self.matrix[i][j] = dist
+                value = (dist + self.all_nodes[j].service_time + self.all_nodes[j].demand) / self.all_nodes[j].profit
+                self.selection_matrix[i][j] = value
 
     def load_model(self, file_name):
         all_lines = list(open(file_name, "r"))
