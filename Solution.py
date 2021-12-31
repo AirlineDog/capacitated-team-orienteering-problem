@@ -185,7 +185,7 @@ class Solution:
             else:
                 break
         # randomly select one of the best nodes
-        population = [0, 1, 2, 3, 4, 5]
+        population = [x for x in range(len(w))]
         if best_li:
             rand_index = rand.choices(population[:len(best_li)], w[:len(best_li)])
             return best_li[rand_index[0]]

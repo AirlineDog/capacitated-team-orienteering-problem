@@ -3,9 +3,9 @@ import time
 from Graph import graph
 from Model import *
 from Solution import *
-for y in range(3, 10):
+for y in range(2, 10):
     print(y)
-    weights = [(71*y-17*x) for x in range(y)]
+    weights = [(y-x) for x in range(y)]
     print(weights)
     start = time.time()
     rand.seed(10)
