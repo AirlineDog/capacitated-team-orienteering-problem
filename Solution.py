@@ -176,7 +176,7 @@ class Solution:
         best_li = []
         # select a number of the best nodes
         for i in range(len(min_li)):
-            if len(best_li) < 6:
+            if len(best_li) < 7:
                 if not self.all_nodes[min_li[i][1]].is_routed \
                         and route.truck.duration_left - self.all_nodes[min_li[i][1]].service_time \
                         - self.matrix[route.nodes[-1]][min_li[i][1]] - self.matrix[min_li[i][1]][0] >= 0 \
@@ -185,8 +185,8 @@ class Solution:
             else:
                 break
         # randomly select one of the best nodes
-        population = [0, 1, 2, 3, 4, 5]
-        weights = [6, 5, 4, 3, 2, 1]
+        population = [0, 1, 2, 3, 4, 5, 6]
+        weights = [7, 6, 5, 4, 3, 2, 1]
         if best_li:
             rand_index = rand.choices(population[:len(best_li)], weights[:len(best_li)])
             return best_li[rand_index[0]]

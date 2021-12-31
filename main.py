@@ -5,12 +5,12 @@ from Model import *
 from Solution import *
 
 start = time.time()
-rand.seed(10)
+rand.seed(40)
 mod = Model()
 mod.load_model("Instance.txt")
 mod.build_matrices()
 s = Solution(mod)
-n = 570
+n = 400
 test_sol = Solution(mod)
 test_sol.initialize(mod)
 pos = 0
