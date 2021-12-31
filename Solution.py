@@ -290,6 +290,7 @@ class Solution:
             self.find_best_two_opt_move(top)
             for route in self.routes:
                 route.segment_load = [0]
+                route.segment_duration = [0]
             if top.moveCost < -0.01:
                 self.apply_two_opt_move(top)
             else:
@@ -298,7 +299,10 @@ class Solution:
     def find_best_two_opt_move(self, top):
         """Finds best 2opt move"""
         for route in self.routes:
-            for node_id in route.nodes[1:]:
+            for i in range(1, len(route.nodes)):
+                node_id = route.nodes[i]
+                route.segment_duration.append(route.segment_duration[-1] + self.matrix[route.nodes[i - 1]][node_id]
+                                              + self.all_nodes[node_id].service_time)
                 route.segment_load.append(route.segment_load[-1] + self.all_nodes[node_id].demand)
         for rtInd1 in range(0, len(self.routes)):
             rt1: Route = self.routes[rtInd1]
@@ -333,20 +337,38 @@ class Solution:
 
                             if self.capacity_is_violated(rt1, nodeInd1, rt2, nodeInd2):
                                 continue
-                            # if duration is violated
+                            if self.duration_is_violated(rt1, nodeInd1, rt2, nodeInd2):
+                                continue
+                            costAdded = self.matrix[A.ID][L.ID] + self.matrix[B.ID][K.ID]
+                            costRemoved = self.matrix[A.ID][B.ID] + self.matrix[K.ID][L.ID]
+                            moveCost = costAdded - costRemoved
                         if moveCost < top.moveCost:
                             top.store_best_two_opt_move(rtInd1, rtInd2, nodeInd1, nodeInd2, moveCost)
 
     def capacity_is_violated(self, rt1, nodeInd1, rt2, nodeInd2):
         """Checks if capacity is violated"""
         rt1FirstSegmentLoad = rt1.segment_load[nodeInd1]
-        rt1SecondSegmentLoad = rt1.max_capacity - rt1FirstSegmentLoad
+        rt1SecondSegmentLoad = (rt1.max_capacity - rt1.truck.capacity_left) - rt1FirstSegmentLoad
 
         rt2FirstSegmentLoad = rt2.segment_load[nodeInd2]
-        rt2SecondSegmentLoad = rt2.max_capacity - rt2FirstSegmentLoad
-        if rt1FirstSegmentLoad + rt2SecondSegmentLoad > rt1.truck.capacity_left:
+        rt2SecondSegmentLoad = (rt2.max_capacity - rt2.truck.capacity_left) - rt2FirstSegmentLoad
+        if rt1FirstSegmentLoad + rt2SecondSegmentLoad > rt1.max_capacity:
             return True
-        if rt2FirstSegmentLoad + rt1SecondSegmentLoad > rt2.truck.capacity_left:
+        if rt2FirstSegmentLoad + rt1SecondSegmentLoad > rt2.max_capacity:
+            return True
+
+        return False
+
+    def duration_is_violated(self, rt1, nodeInd1, rt2, nodeInd2):
+        """Checks if duration is violated"""
+        rt1FirstSegmentDuration = rt1.segment_duration[nodeInd1]
+        rt1SecondSegmentDuration = rt1.max_duration - rt1.truck.duration_left - rt1FirstSegmentDuration
+
+        rt2FirstSegmentDuration = rt2.segment_duration[nodeInd2]
+        rt2SecondSegmentDuration = rt2.max_duration - rt2.truck.duration_left - rt2FirstSegmentDuration
+        if rt1FirstSegmentDuration + rt2SecondSegmentDuration > rt1.max_duration:
+            return True
+        if rt2FirstSegmentDuration + rt1SecondSegmentDuration > rt2.max_duration:
             return True
 
         return False
@@ -383,9 +405,9 @@ class Solution:
         tc = 0
         tl = 0
         for i in range(0, len(rt.nodes) - 1):
-            A = rt.nodes[i]
-            B = rt.nodes[i + 1]
-            tc += self.matrix[A.ID][B.ID]
+            A = self.all_nodes[rt.nodes[i]]
+            B = self.all_nodes[rt.nodes[i + 1]]
+            tc += self.matrix[A.ID][B.ID] + A.service_time
             tl += A.demand
         rt.truck.capacity_left = rt.max_capacity - tl
         rt.truck.duration_left = rt.max_duration - tc
