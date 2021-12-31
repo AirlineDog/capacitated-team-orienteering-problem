@@ -3,7 +3,7 @@ import time
 from Graph import graph
 from Model import *
 from Solution import *
-for y in range(2, 10):
+for y in range(3, 10):
     print(y)
     weights = [(71*y-17*x) for x in range(y)]
     print(weights)
@@ -11,8 +11,7 @@ for y in range(2, 10):
     rand.seed(10)
     mod = Model()
     mod.load_model("Instance.txt")
-    mod.build_cost_matrix()
-    mod.build_selection_matrix()
+    mod.build_matrices()
     s = Solution(mod)
     n = 500
     test_sol = Solution(mod)
@@ -33,8 +32,8 @@ for y in range(2, 10):
     rand.seed(20)
     mod = Model()
     mod.load_model("Instance.txt")
-    mod.build_cost_matrix()
-    mod.build_selection_matrix()
+    mod.build_matrices()
+
     s = Solution(mod)
 
     test_sol = Solution(mod)
@@ -55,8 +54,8 @@ for y in range(2, 10):
     rand.seed(30)
     mod = Model()
     mod.load_model("Instance.txt")
-    mod.build_cost_matrix()
-    mod.build_selection_matrix()
+    mod.build_matrices()
+
     s = Solution(mod)
 
     test_sol = Solution(mod)
@@ -77,8 +76,8 @@ for y in range(2, 10):
     rand.seed(40)
     mod = Model()
     mod.load_model("Instance.txt")
-    mod.build_cost_matrix()
-    mod.build_selection_matrix()
+    mod.build_matrices()
+
     s = Solution(mod)
 
     test_sol = Solution(mod)
@@ -99,8 +98,8 @@ for y in range(2, 10):
     rand.seed(50)
     mod = Model()
     mod.load_model("Instance.txt")
-    mod.build_cost_matrix()
-    mod.build_selection_matrix()
+    mod.build_matrices()
+
     s = Solution(mod)
 
     test_sol = Solution(mod)
