@@ -143,7 +143,7 @@ class Solution:
             node.is_routed = False
 
     def print_solution(self):
-        """Prints final solution"""
+        """Prints sol.txt file with the final solution"""
         with open("sol.txt", "w") as f:
             f.write("Total Profit\n")
             f.write(str(self.total_profit) + "\n")
@@ -161,10 +161,11 @@ class Solution:
         for route in self.routes:
             # route on the road
             while not route.returned:  # next route waits for the previous to return
-                node_id = self.find_next_node_rand(route)
+                node_id = self.find_next_node_rand(route)  # best node to visit next
                 if node_id is not None:
                     self.update_dependent(node_id, route)
                 else:
+                    # route has to return to depot
                     route.truck.duration_left -= self.matrix[route.nodes[-1]][0]
                     route.nodes.append(0)
                     route.returned = True
@@ -229,16 +230,16 @@ class Solution:
                                 targetNodeIndex == originNodeIndex or targetNodeIndex == originNodeIndex - 1):
                             continue
 
-                        # Origin nodes (B is to be changed)
+                        # Origin route nodes (B is to be changed)
                         A: Node = self.all_nodes[rt1.nodes[originNodeIndex - 1]]
                         B: Node = self.all_nodes[rt1.nodes[originNodeIndex]]
                         C: Node = self.all_nodes[rt1.nodes[originNodeIndex + 1]]
-                        # Target Nodes
+                        # Target route Nodes
                         F: Node = self.all_nodes[rt2.nodes[targetNodeIndex]]
                         G: Node = self.all_nodes[rt2.nodes[targetNodeIndex + 1]]
 
-                        # route not out of capacity
                         if rt1 != rt2:
+                            # route out of capacity
                             if rt2.truck.capacity_left - B.demand < 0:
                                 continue
 
@@ -270,6 +271,10 @@ class Solution:
         B: int = originRt.nodes[rm.originNodePosition]
 
         if originRt == targetRt:
+            # A--->B--->C--->F--->G  >  A--->C--->F--->B--->G
+            #      V           ^
+            #      |           |
+            #      \-----------/
             del originRt.nodes[rm.originNodePosition]
             if rm.originNodePosition < rm.targetNodePosition:
                 targetRt.nodes.insert(rm.targetNodePosition, B)
@@ -278,6 +283,10 @@ class Solution:
 
             originRt.truck.duration_left -= rm.moveCost
         else:
+            # A--->B--->C   >   A--->C
+            #      |        >
+            #      V        >
+            #    F--->G     > F--->B--->G
             del originRt.nodes[rm.originNodePosition]
             targetRt.nodes.insert(rm.targetNodePosition + 1, B)
             originRt.truck.duration_left -= rm.costChangeOriginRt
@@ -302,6 +311,7 @@ class Solution:
 
     def find_best_two_opt_move(self, top):
         """Finds best 2opt move"""
+        # calculate route load and duration until node inclusive
         for route in self.routes:
             for i in range(1, len(route.nodes)):
                 node_id = route.nodes[i]
@@ -320,8 +330,12 @@ class Solution:
                     for nodeInd2 in range(start2, len(rt2.nodes) - 1):
                         # if self.matrix[nodeInd1][nodeInd2] > 50:
                         #     continue
+
+                        # Origin route nodes
                         A = self.all_nodes[rt1.nodes[nodeInd1]]
                         B = self.all_nodes[rt1.nodes[nodeInd1 + 1]]
+
+                        # Target route nodes
                         K = self.all_nodes[rt2.nodes[nodeInd2]]
                         L = self.all_nodes[rt2.nodes[nodeInd2 + 1]]
 
@@ -366,8 +380,17 @@ class Solution:
         rt1FirstSegmentDuration = rt1.segment_duration[nodeInd1]
         rt1SecondSegmentDuration = rt1.max_duration - rt1.truck.duration_left - rt1FirstSegmentDuration
 
+        # Second segment includes the duration from the route breakpoint
+        rt1SecondSegmentDuration -= self.matrix[rt1.nodes[nodeInd1]][rt1.nodes[nodeInd1 + 1]]
+        # Should include the duration from the other route breakpoint
+        rt1SecondSegmentDuration += self.matrix[rt2.nodes[nodeInd2]][rt1.nodes[nodeInd1 + 1]]
+
         rt2FirstSegmentDuration = rt2.segment_duration[nodeInd2]
         rt2SecondSegmentDuration = rt2.max_duration - rt2.truck.duration_left - rt2FirstSegmentDuration
+
+        rt2SecondSegmentDuration -= self.matrix[rt2.nodes[nodeInd2]][rt2.nodes[nodeInd2 + 1]]
+        rt2SecondSegmentDuration += self.matrix[rt1.nodes[nodeInd1]][rt2.nodes[nodeInd2 + 1]]
+
         if rt1FirstSegmentDuration + rt2SecondSegmentDuration > rt1.max_duration:
             return True
         if rt2FirstSegmentDuration + rt1SecondSegmentDuration > rt2.max_duration:
@@ -381,12 +404,38 @@ class Solution:
         rt2: Route = self.routes[top.positionOfSecondRoute]
 
         if rt1 == rt2:
+            # A-->B-->C-->K-->L-->M
+            #
+            #
+            # /-----------\
+            # |           |
+            # |           V
+            # A   B<--C<--K   L-->M
+            #     |           ^
+            #     |           |
+            #     \-----------/
+            #
+            #
+            # A-->K-->C-->B-->L-->M
+
             # reverses the nodes in the segment [positionOfFirstNode + 1,  top.positionOfSecondNode]
             reversedSegment = reversed(rt1.nodes[top.positionOfFirstNode + 1: top.positionOfSecondNode + 1])
             rt1.nodes[top.positionOfFirstNode + 1: top.positionOfSecondNode + 1] = reversedSegment
             rt1.truck.duration_left -= top.moveCost
 
         else:
+            # A-->B
+            #
+            # K-->L
+            #
+            # A-\ /->B
+            #    X
+            # K-/ \->L
+            #
+            # A-->L
+            #
+            # K-->B
+
             # slice with the nodes from position top.positionOfFirstNode + 1 onwards
             relocatedSegmentOfRt1 = rt1.nodes[top.positionOfFirstNode + 1:]
 
@@ -453,6 +502,11 @@ class Solution:
 
     def apply_add_node(self, am: AdditionMove):
         """Applies the addition move"""
+        #   C       >
+        #   |       >
+        #   V       >
+        # A--->B    >  A-->C-->B
+
         am.additionRoute.nodes.insert(am.additionPosition + 1, am.addingNode.ID)
         am.additionRoute.truck.duration_left -= am.moveCost
         am.additionRoute.truck.capacity_left -= am.addingNode.demand
@@ -475,18 +529,23 @@ class Solution:
                     if node.is_routed or self.matrix[rm_node][add_node] > 50 or new_profit < dr.new_profit \
                             or route.truck.capacity_left < new_demand:
                         continue
-                    rm_cost = self.matrix[route.nodes[i - 1]][rm_node] \
-                              + self.matrix[rm_node][route.nodes[i + 1]] \
-                              + self.all_nodes[rm_node].service_time
-                    add_cost = self.matrix[route.nodes[i - 1]][route.nodes[i + 1]]
                     for place in range(len(route.nodes) - 1):
                         if place == i or place == i - 1:
-                            continue
+                            rm_cost = self.matrix[route.nodes[i - 1]][rm_node] \
+                                      + self.matrix[rm_node][route.nodes[i + 1]] \
+                                      + self.all_nodes[rm_node].service_time
+                            add_cost = self.matrix[route.nodes[i - 1]][add_node] \
+                                       + self.matrix[add_node][route.nodes[i + 1]] \
+                                       + self.all_nodes[add_node].service_time
                         else:
-                            add_cost += self.matrix[route.nodes[place]][add_node] \
-                                        + self.matrix[add_node][route.nodes[place + 1]] \
-                                        + self.all_nodes[add_node].service_time
-                            rm_cost += self.matrix[route.nodes[place]][route.nodes[place + 1]]
+                            rm_cost = self.matrix[route.nodes[i - 1]][rm_node] \
+                                      + self.matrix[rm_node][route.nodes[i + 1]] \
+                                      + self.all_nodes[rm_node].service_time \
+                                      + self.matrix[route.nodes[place]][route.nodes[place + 1]]
+                            add_cost = self.matrix[route.nodes[i - 1]][route.nodes[i + 1]] \
+                                       + self.matrix[route.nodes[place]][add_node] \
+                                       + self.matrix[add_node][route.nodes[place + 1]] \
+                                       + self.all_nodes[add_node].service_time
                         cost = add_cost - rm_cost
                         if route.truck.duration_left > cost:
                             dr.store_best_destroy_repair(route, rm_node, add_node,
@@ -496,6 +555,11 @@ class Solution:
 
     def apply_destroy_repair(self, dr):
         """Applies the destroy & repair step"""
+        #             >   D     >
+        #             >   |     >
+        #             >   V     >
+        # A--->B--->C > A--->C  >  A-->D-->C
+
         del dr.route.nodes[dr.out_place]
         if dr.out_place <= dr.in_place:
             dr.route.nodes.insert(dr.in_place, dr.add_node)
@@ -510,16 +574,15 @@ class Solution:
 
     def solve(self):
         """VRP Complete Solver"""
-        # self.initial_solution()
         self.initial_solution()
-        flag = True
+        improvement = True
         prof = self.total_profit
-        while flag:
+        while improvement:
             self.relocation_LS()
             self.two_opt_LS()
             self.add_nodes()
             self.destroy_and_repair()
             if prof == self.total_profit:
-                flag = False
+                improvement = False
             else:
                 prof = self.total_profit
