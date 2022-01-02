@@ -224,24 +224,25 @@ class Solution:
                 rt2: Route = self.routes[targetRouteIndex]
                 for originNodeIndex in range(1, len(rt1.nodes) - 1):
                     for targetNodeIndex in range(0, len(rt2.nodes) - 1):
-                        # if self.matrix[originNodeIndex][targetNodeIndex] > 50:
-                        #     continue
-                        if originRouteIndex == targetRouteIndex and (
-                                targetNodeIndex == originNodeIndex or targetNodeIndex == originNodeIndex - 1):
+                        if self.matrix[rt1.nodes[originNodeIndex]][rt2.nodes[targetNodeIndex]] > 50:
+                            continue
+                        if originRouteIndex == targetRouteIndex \
+                                and (targetNodeIndex == originNodeIndex or targetNodeIndex == originNodeIndex - 1):
                             continue
 
                         # Origin route nodes (B is to be changed)
                         A: Node = self.all_nodes[rt1.nodes[originNodeIndex - 1]]
                         B: Node = self.all_nodes[rt1.nodes[originNodeIndex]]
                         C: Node = self.all_nodes[rt1.nodes[originNodeIndex + 1]]
-                        # Target route Nodes
-                        F: Node = self.all_nodes[rt2.nodes[targetNodeIndex]]
-                        G: Node = self.all_nodes[rt2.nodes[targetNodeIndex + 1]]
 
                         if rt1 != rt2:
                             # route out of capacity
                             if rt2.truck.capacity_left - B.demand < 0:
                                 continue
+
+                        # Target route Nodes
+                        F: Node = self.all_nodes[rt2.nodes[targetNodeIndex]]
+                        G: Node = self.all_nodes[rt2.nodes[targetNodeIndex + 1]]
 
                         # Distance costs
                         costAdded = self.matrix[A.ID][C.ID] + self.matrix[F.ID][B.ID] + self.matrix[B.ID][G.ID]
@@ -328,8 +329,8 @@ class Solution:
                         start2 = nodeInd1 + 2
 
                     for nodeInd2 in range(start2, len(rt2.nodes) - 1):
-                        # if self.matrix[nodeInd1][nodeInd2] > 50:
-                        #     continue
+                        if self.matrix[rt1.nodes[nodeInd1]][rt2.nodes[nodeInd2]] > 40:
+                            continue
 
                         # Origin route nodes
                         A = self.all_nodes[rt1.nodes[nodeInd1]]

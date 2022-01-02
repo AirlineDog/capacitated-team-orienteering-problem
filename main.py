@@ -21,11 +21,7 @@ for i in range(n):
         s.total_profit = test_sol.total_profit
         s.routes = test_sol.routes
         pos = i
-    if test_sol.total_profit > 1070:
-        print(test_sol.total_profit, i)
-print("finish")
-print(s.total_profit, pos)
 s.print_solution()
 end = time.time()
-print((end-start)/60)
+print(str((end-start)//60) + " Minutes, " + str((end-start)%60) + " Seconds")
 graph(s, s.routes)
