@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-import numpy as np
 
 
 def graph(solution, routes):
@@ -23,8 +22,9 @@ def graph(solution, routes):
            for i in range(len(solution.routes))] + [solution.total_profit] \
            + [str(sum(solution.routes[i].profit for i in range(len(solution.routes))))]
     plt.legend(leg, loc='lower right')
-    ind = 137
+    ind = 0
     # plt.gca().add_patch(plt.Circle((solution.all_nodes[ind].x, solution.all_nodes[ind].y), 50, fill=False))
     # plt.gca().add_patch(plt.Circle((solution.all_nodes[ind].x, solution.all_nodes[ind].y), 25, fill=False))
     plt.gca().add_patch(plt.Circle((solution.all_nodes[ind].x, solution.all_nodes[ind].y), 15, fill=False))
     plt.savefig("test.png")
+    plt.close()
