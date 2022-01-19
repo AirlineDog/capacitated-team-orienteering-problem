@@ -211,8 +211,10 @@ class Solution:
         while termination is False:
             rm.initialize()
             self.find_best_relocation_move(rm)
+            # Move lowers the moving cost
             if rm.moveCost < -0.01:
                 self.apply_relocation_move(rm)
+            # no improving found
             else:
                 termination = True
 
@@ -225,9 +227,11 @@ class Solution:
                 for originNodeIndex in range(1, len(rt1.nodes) - 1):
                     for targetNodeIndex in range(0, len(rt2.nodes) - 1):
                         if self.matrix[rt1.nodes[originNodeIndex]][rt2.nodes[targetNodeIndex]] > 50:
+                            # The two nodes are far from each other
                             continue
                         if originRouteIndex == targetRouteIndex \
                                 and (targetNodeIndex == originNodeIndex or targetNodeIndex == originNodeIndex - 1):
+                            # Same route same nodes
                             continue
 
                         # Origin route nodes (B is to be changed)
@@ -236,8 +240,8 @@ class Solution:
                         C: Node = self.all_nodes[rt1.nodes[originNodeIndex + 1]]
 
                         if rt1 != rt2:
-                            # route out of capacity
                             if rt2.truck.capacity_left - B.demand < 0:
+                                # route out of capacity
                                 continue
 
                         # Target route Nodes
@@ -253,12 +257,13 @@ class Solution:
                         # finds minimum moveCost
                         if moveCost < rm.moveCost:
                             # Distance + service time costs
-                            originRtCostChange = self.matrix[A.ID][C.ID] \
-                                                 - self.matrix[A.ID][B.ID] - self.matrix[B.ID][C.ID] - B.service_time
+                            originRtCostChange = self.matrix[A.ID][C.ID] - self.matrix[A.ID][B.ID] \
+                                                 - self.matrix[B.ID][C.ID] - B.service_time
                             targetRtCostChange = self.matrix[F.ID][B.ID] + self.matrix[B.ID][G.ID] \
                                                  - self.matrix[F.ID][G.ID] + B.service_time
-                            # route not out of time
+
                             if rt2.truck.duration_left - targetRtCostChange > 0:
+                                # route is not out of time
                                 rm.store_best_relocation_move(originRouteIndex, targetRouteIndex, originNodeIndex,
                                                               targetNodeIndex, moveCost, originRtCostChange,
                                                               targetRtCostChange)
@@ -302,11 +307,14 @@ class Solution:
         while terminationCondition is False:
             top.initialize()
             self.find_best_two_opt_move(top)
+            # initialize route segment loads and durations
             for route in self.routes:
                 route.segment_load = [0]
                 route.segment_duration = [0]
+            # Move lowers the cost
             if top.moveCost < -0.01:
                 self.apply_two_opt_move(top)
+            # no improving move found
             else:
                 terminationCondition = True
 
@@ -319,6 +327,7 @@ class Solution:
                 route.segment_duration.append(route.segment_duration[-1] + self.matrix[route.nodes[i - 1]][node_id]
                                               + self.all_nodes[node_id].service_time)
                 route.segment_load.append(route.segment_load[-1] + self.all_nodes[node_id].demand)
+
         for rtInd1 in range(0, len(self.routes)):
             rt1: Route = self.routes[rtInd1]
             for rtInd2 in range(rtInd1, len(self.routes)):
@@ -330,6 +339,8 @@ class Solution:
 
                     for nodeInd2 in range(start2, len(rt2.nodes) - 1):
                         if self.matrix[rt1.nodes[nodeInd1]][rt2.nodes[nodeInd2]] > 40:
+                            # The two nodes are far from each other
+
                             continue
 
                         # Origin route nodes
@@ -351,7 +362,6 @@ class Solution:
                                 continue
                             if nodeInd1 == len(rt1.nodes) - 2 and nodeInd2 == len(rt2.nodes) - 2:
                                 continue
-
                             if self.capacity_is_violated(rt1, nodeInd1, rt2, nodeInd2):
                                 continue
                             if self.duration_is_violated(rt1, nodeInd1, rt2, nodeInd2):
@@ -381,20 +391,21 @@ class Solution:
         rt1FirstSegmentDuration = rt1.segment_duration[nodeInd1]
         rt1SecondSegmentDuration = rt1.max_duration - rt1.truck.duration_left - rt1FirstSegmentDuration
 
-        # Second segment includes the duration from the route breakpoint
-        rt1SecondSegmentDuration -= self.matrix[rt1.nodes[nodeInd1]][rt1.nodes[nodeInd1 + 1]]
-        # Should include the duration from the other route breakpoint
-        rt1SecondSegmentDuration += self.matrix[rt2.nodes[nodeInd2]][rt1.nodes[nodeInd1 + 1]]
-
         rt2FirstSegmentDuration = rt2.segment_duration[nodeInd2]
         rt2SecondSegmentDuration = rt2.max_duration - rt2.truck.duration_left - rt2FirstSegmentDuration
 
+        # Second segments include the duration from the route breakpoint AB add KL
+        # Must be removed
+        rt1SecondSegmentDuration -= self.matrix[rt1.nodes[nodeInd1]][rt1.nodes[nodeInd1 + 1]]
         rt2SecondSegmentDuration -= self.matrix[rt2.nodes[nodeInd2]][rt2.nodes[nodeInd2 + 1]]
-        rt2SecondSegmentDuration += self.matrix[rt1.nodes[nodeInd1]][rt2.nodes[nodeInd2 + 1]]
 
-        if rt1FirstSegmentDuration + rt2SecondSegmentDuration > rt1.max_duration:
+        AL = self.matrix[rt1.nodes[nodeInd1]][rt2.nodes[nodeInd2 + 1]]
+        KB = self.matrix[rt2.nodes[nodeInd2]][rt1.nodes[nodeInd1 + 1]]
+
+        # The new arcs should be added
+        if rt1FirstSegmentDuration + rt2SecondSegmentDuration + AL > rt1.max_duration:
             return True
-        if rt2FirstSegmentDuration + rt1SecondSegmentDuration > rt2.max_duration:
+        if rt2FirstSegmentDuration + rt1SecondSegmentDuration + KB > rt2.max_duration:
             return True
 
         return False
@@ -454,18 +465,18 @@ class Solution:
 
     def update_route_cost_and_load(self, rt: Route):
         """Updates duration and capacity"""
-        tc = 0
-        tl = 0
+        truck_capacity_used = 0
+        truck_duration_used = 0
         for i in range(0, len(rt.nodes) - 1):
             A = self.all_nodes[rt.nodes[i]]
             B = self.all_nodes[rt.nodes[i + 1]]
-            tc += self.matrix[A.ID][B.ID] + A.service_time
-            tl += A.demand
-        rt.truck.capacity_left = rt.max_capacity - tl
-        rt.truck.duration_left = rt.max_duration - tc
+            truck_capacity_used += self.matrix[A.ID][B.ID] + A.service_time
+            truck_duration_used += A.demand
+        rt.truck.capacity_left = rt.max_capacity - truck_duration_used
+        rt.truck.duration_left = rt.max_duration - truck_capacity_used
 
     def add_nodes(self):
-        """Adds nodes to the solution after Local Search"""
+        """Adds nodes to the solution after Local Search cost reduction"""
         am = AdditionMove()
         for route in self.routes:
             flag = False  # more additions to be done
