@@ -35,3 +35,7 @@ the goal is to determine M paths from the start point to the end point through a
       
           This operator focuses on destroying a part of the solution and then reconstructing with an other node to differentiate the solution.
 
+
+## Final solution graphical representation: 
+
+![Drag Racing](./1092_progression_figures/21_1092.png)
