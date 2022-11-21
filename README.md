@@ -1,8 +1,8 @@
 # capacitated-team-orienteering-problem
-### A local search algorithm algorithm for the team orienteering problem.
+### A local search algorithm algorithm for the capacitated team orienteering problem.
 
-In the team orienteering problem, start and end depots are specified along with other locations which have associated demands, service times and profits.
-Given a fixed amount of time for each of the M vehicles of the team,
+In the capacitated team orienteering problem, start and end depots are specified along with other locations which have associated demands, service times and profits.
+Given a fixed amount of time for each of the M vehicles with limited capacity of the team,
 the goal is to determine M paths from the start point to the end point through a subset of locations in order to maximize the total profit.
 
 ## Technics used :
